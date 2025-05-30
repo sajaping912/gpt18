@@ -248,10 +248,15 @@ const enemyImgs = [
   return img;
 });
 
-// --- START: Bullet image loading ---
 const bulletImg = new Image();
 bulletImg.src = 'images/bubble_bullet.png';
-// --- END: Bullet image loading ---
+
+// --- START: 배경 이미지 로드 ---
+const backgroundImage = new Image();
+backgroundImage.src = 'images/new_background.jpg'; // 교체할 배경 이미지 경로
+let isBackgroundImageLoaded = false;
+// --- END: 배경 이미지 로드 ---
+
 
 const bgmFiles = [
   'sounds/background.mp3'
@@ -336,7 +341,7 @@ setInterval(() => {
 
 // Asset 로딩 관리
 let allAssetsReady = false;
-let assetsToLoad = 1 + enemyImgs.length + 1;
+let assetsToLoad = 1 + enemyImgs.length + 1 + 1; // player, enemies, bullet, background
 let loadedAssetCount = 0;
 let coffeeVideoAssetReady = false;
 
@@ -361,9 +366,9 @@ function coffeeVideoError() {
 }
 
 function checkAllAssetsReady() {
-  if (loadedAssetCount >= assetsToLoad && coffeeVideoAssetReady) {
+  if (loadedAssetCount >= assetsToLoad && coffeeVideoAssetReady && isBackgroundImageLoaded) {
     allAssetsReady = true;
-    console.log("All game assets (images and video) are ready.");
+    console.log("All game assets (images, video, and background) are ready.");
   }
 }
 
@@ -378,17 +383,30 @@ enemyImgs.forEach(img => {
 bulletImg.onload = assetLoaded;
 bulletImg.onerror = () => { console.error("Failed to load bullet image."); assetLoaded(); };
 
+backgroundImage.onload = () => {
+    isBackgroundImageLoaded = true;
+    console.log("Background image loaded successfully (counted).");
+    assetLoaded(); // Count background image as a loaded asset
+    if (isGameRunning && !isGamePaused) { // If game already started, redraw
+        draw();
+    }
+};
+backgroundImage.onerror = () => {
+    console.error("Failed to load background image. Check path and filename: " + backgroundImage.src);
+    isBackgroundImageLoaded = false; // Explicitly set to false on error
+    assetLoaded(); // Still count it as an "attempted" asset load to not hang indefinitely
+};
+
+
 if (coffeeSteamVideo) {
   coffeeSteamVideo.oncanplaythrough = coffeeVideoReady;
-  coffeeSteamVideo.onerror = coffeeVideoError; // Handle loading errors for the video
-  // Check if video might already be ready (e.g., cached)
+  coffeeSteamVideo.onerror = coffeeVideoError;
   if (coffeeSteamVideo.readyState >= HTMLVideoElement.HAVE_ENOUGH_DATA) coffeeVideoReady();
-  else if (coffeeSteamVideo.error) coffeeVideoError(); // Or if it already errored
+  else if (coffeeSteamVideo.error) coffeeVideoError();
 } else {
-  // If the video element itself is missing, assume ready without steam effect
   console.warn("coffeeSteamVideo element not found in HTML. Assuming ready without steam effect.");
   coffeeVideoAssetReady = true;
-  checkAllAssetsReady(); // Ensure this path also calls checkAllAssetsReady
+  checkAllAssetsReady();
 }
 
 
@@ -410,21 +428,17 @@ const BUBBLE_SWAY_AMPLITUDE_FACTOR_MAX = 0.8;
 
 const BUBBLE_HORIZONTAL_DRIFT_PPS_MAX = 25;
 
-// --- START: Cosmos Petal Constants ---
-const PETAL_SIZE = 20; // 코스모스 꽃잎 크기
-const PETAL_FALL_SPEED_PPS = 25; // 꽃잎 기본 낙하 속도
-const PETAL_ROTATION_SPEED_BASE = 1.5; // 꽃잎 회전 속도 (rad/s)
-const PETAL_SWAY_AMPLITUDE_BASE = 12; // 꽃잎 좌우 흔들림 폭
-const PETAL_SWAY_SPEED_BASE = 1.8;    // 꽃잎 좌우 흔들림 속도
-const PETAL_DRIFT_X_PPS_BASE = 30;  // 꽃잎 수평 바람 영향
-const PETAL_FLUTTER_AMPLITUDE_BASE = 3.5; // 꽃잎 상하 떨림 폭
-const PETAL_FLUTTER_SPEED_BASE = 3.0;   // 꽃잎 상하 떨림 속도
-// --- END: Cosmos Petal Constants ---
+const PETAL_SIZE = 20;
+const PETAL_FALL_SPEED_PPS = 25;
+const PETAL_ROTATION_SPEED_BASE = 1.5;
+const PETAL_SWAY_AMPLITUDE_BASE = 12;
+const PETAL_SWAY_SPEED_BASE = 1.8;
+const PETAL_DRIFT_X_PPS_BASE = 30;
+const PETAL_FLUTTER_AMPLITUDE_BASE = 3.5;
+const PETAL_FLUTTER_SPEED_BASE = 3.0;
 
-// --- MODIFICATION: Adjust sentence vertical positioning ---
-const SENTENCE_VERTICAL_ADJUSTMENT = -80; // Changed from -75 (moves question up by 5px)
-const ANSWER_OFFSET_Y = 70;             // Changed from 65 (widens gap by 5px, moving answer down)
-// --- END MODIFICATION ---
+const SENTENCE_VERTICAL_ADJUSTMENT = -80;
+const ANSWER_OFFSET_Y = 70;
 const LINE_HEIGHT = 30;
 const PLAYER_TOUCH_Y_OFFSET = 15;
 
@@ -432,7 +446,7 @@ let player = { x: 0, y: 0, w: PLAYER_SIZE, h: PLAYER_SIZE };
 let bullets = [];
 let enemies = [];
 let enemyBullets = [];
-let detachedPetals = []; // 떨어진 코스모스 꽃잎을 관리할 배열
+let detachedPetals = [];
 
 let isGameRunning = false;
 let isGamePaused = false;
@@ -481,7 +495,7 @@ const notVerbIng = [
 ];
 
 function isAux(word) {
-  const lowerWord = word.toLowerCase().replace(/[^a-z0-9']/g, ''); // Keep apostrophe for "won't" etc.
+  const lowerWord = word.toLowerCase().replace(/[^a-z0-9']/g, '');
   return MODAL_AUX.includes(lowerWord) || DO_AUX.includes(lowerWord);
 }
 function isWh(word) {
@@ -494,9 +508,6 @@ function isVerb(word) {
     "allowed", "join", "break", "crash", "do", "fly", "cry", "got", "lost", "visit", "talk", "help", "stuck", "eat",
     "go", "melt", "laugh", "can", "see", "fix", "jump", "practiced", "open", "hear", "find", "hiding", "start",
     "taken", "rolled", "bring", "carry", "set", "keep"
-    // Added 'be' verbs as they can act as main verbs.
-    // Note: 'isAux' will also catch some of these if they are auxiliaries.
-    // The splitting logic will need to be careful.
     , "be", "is", "am", "are", "was", "were"
   ];
   const lowerWord = word.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -532,8 +543,8 @@ function isQuestion(sentenceText) {
 async function getWordTranslation(word, targetLang = 'ko') {
   const cleanedWord = word.replace(/[^a-zA-Z0-9]/g, "").toLowerCase().trim();
   if (!cleanedWord) return "Error: Invalid word";
-  await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200)); // Simulate API call delay
-  const mockTranslations = { /* translations as before */ };
+  await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
+  const mockTranslations = { /* as before */ };
   if (mockTranslations[cleanedWord]) return mockTranslations[cleanedWord];
   return `[${cleanedWord} 뜻]`;
 }
@@ -573,11 +584,10 @@ function getVoicesReliably() {
                         }, 200);
                     }
                 };
-                window.speechSynthesis.getVoices(); // Trigger loading
+                window.speechSynthesis.getVoices();
             } else {
-                // Fallback for browsers that don't support onvoiceschanged
                 let attempts = 0;
-                const maxAttempts = 20; // Poll for up to 4 seconds
+                const maxAttempts = 20;
                 const intervalId = setInterval(() => {
                     attempts++;
                     if (tryGetAndResolveVoices()) {
@@ -585,15 +595,15 @@ function getVoicesReliably() {
                     } else if (attempts >= maxAttempts) {
                         clearInterval(intervalId);
                         console.warn("getVoicesReliably: Voices NOT loaded after multiple polling attempts.");
-                        resolve([]); // Resolve with empty if still not loaded
+                        resolve([]);
                     }
                 }, 200);
             }
         }).catch(error => {
             console.error("Error within getVoicesReliably promise:", error);
-            voicesPromise = null; // Reset promise on error
-            _voices = []; // Clear voices cache
-            return []; // Return empty array or rethrow, depending on desired error handling
+            voicesPromise = null;
+            _voices = [];
+            return [];
         });
     }
     return voicesPromise;
@@ -605,7 +615,7 @@ async function getVoice(lang = 'en-US', gender = 'female') {
     availableVoices = await getVoicesReliably();
   } catch (error) {
     console.error("getVoice: Failed to load voices from getVoicesReliably:", error);
-    return null; // Or handle error as appropriate
+    return null;
   }
 
   if (!availableVoices || availableVoices.length === 0) {
@@ -617,16 +627,12 @@ async function getVoice(lang = 'en-US', gender = 'female') {
   const langVoices = availableVoices.filter(v => v.lang.toLowerCase() === langNormalized);
 
   if (langVoices.length === 0) {
-    // Fallback to primary language if specific locale not found (e.g., 'en' for 'en-US')
     const primaryLang = langNormalized.split('-')[0];
     const primaryLangVoices = availableVoices.filter(v => v.lang.toLowerCase().startsWith(primaryLang));
     if (primaryLangVoices.length > 0) {
-        // Could add gender preference here too if desired for primary lang fallback
-        return primaryLangVoices[0]; // Or a more sophisticated selection
+        return primaryLangVoices[0];
     }
-    // Further fallback if primary language also not found
   } else {
-    // Specific language locale found, try to match gender
     if (gender === 'female') {
         const femaleVoices = langVoices.filter(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('susan') || v.name.toLowerCase().includes('eva') || v.name.toLowerCase().includes('google us english') || v.name.toLowerCase().includes('여자') || v.name.toLowerCase().includes(' 여성'));
         if (femaleVoices.length > 0) return femaleVoices[0];
@@ -634,14 +640,12 @@ async function getVoice(lang = 'en-US', gender = 'female') {
         const maleVoices = langVoices.filter(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('tom') || v.name.toLowerCase().includes('google us english') || v.name.toLowerCase().includes('남자') || v.name.toLowerCase().includes(' 남성'));
         if (maleVoices.length > 0) return maleVoices[0];
     }
-    // If gender match fails but lang matches, return first available for that lang
     return langVoices[0];
   }
 
-  // Ultimate fallbacks
   const defaultVoice = availableVoices.find(v => v.default);
   if (defaultVoice) return defaultVoice;
-  if (availableVoices.length > 0) return availableVoices[0]; // Last resort: any voice
+  if (availableVoices.length > 0) return availableVoices[0];
 
   console.warn("getVoice: Exhausted all fallbacks. No voice found.");
   return null;
@@ -653,11 +657,10 @@ async function speakWord(word) {
   if (!cleanWord) return;
 
   try {
-    await getVoicesReliably(); // Ensure voices are loaded or loading has been attempted
+    await getVoicesReliably();
   } catch (error) {
     console.error(`speakWord: Critical error ensuring voices were loaded for word "${cleanWord}":`, error);
-    // Decide if you want to proceed without a specific voice or just return/reject
-    return; // Or reject(error);
+    return;
   }
 
   return new Promise(async (resolve, reject) => {
@@ -666,15 +669,13 @@ async function speakWord(word) {
       utter.lang = 'en-US';
       utter.rate = 0.92;
       utter.pitch = 1.0;
-      utter.volume = 1.0; // Ensure full volume for word speech
+      utter.volume = 1.0;
 
-      const voice = await getVoice('en-US', 'female'); // Attempt to get the desired voice
+      const voice = await getVoice('en-US', 'female');
       if (voice) {
         utter.voice = voice;
       } else {
         console.warn(`speakWord: No specific voice found for 'en-US' female for word "${cleanWord}". Using system default for this lang if available.`);
-        // SpeechSynthesis will use a default voice if utter.voice is not set or is null,
-        // typically trying to match utter.lang.
       }
 
       utter.onend = () => resolve();
@@ -684,7 +685,6 @@ async function speakWord(word) {
       };
       window.speechSynthesis.speak(utter);
     } catch (error) {
-        // This catch block handles errors from creating SpeechSynthesisUtterance or calling speak()
         console.error(`speakWord: Exception during speakWord execution for "${cleanWord}":`, error);
         reject(error);
     }
@@ -699,8 +699,8 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
 
     let localWordRects = [];
     ctx.font = englishFont;
-    ctx.textAlign = "left"; // Words are placed from left to right for centering calculation
-    ctx.textBaseline = "middle"; // Align text vertically to its center
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
 
     let lines = [sentenceObject.line1, sentenceObject.line2].filter(l => l && l.trim());
     if (lines.length === 0) return { lastY: baseY, wordRects: [] };
@@ -709,14 +709,12 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
     let yFirstLineTextCenter;
 
     if (isQuestionBlock) {
-        // Center the entire block of text around baseY
         yFirstLineTextCenter = baseY - blockHeight / 2 + LINE_HEIGHT / 2;
     } else {
-        // For answer block, baseY is the top of the block, so first line is baseY + half line height
         yFirstLineTextCenter = baseY + LINE_HEIGHT / 2;
     }
 
-    let lastDrawnTextBottomY = baseY; // Keep track of the bottom of the drawn text
+    let lastDrawnTextBottomY = baseY;
 
     const sentenceFullText = (sentenceObject.line1 + " " + sentenceObject.line2).trim();
     const isCurrentBlockContentQuestionType = isQuestion(sentenceFullText);
@@ -731,27 +729,26 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
         let spaceWidth = ctx.measureText(" ").width;
         let totalLineWidth = wordMetrics.reduce((sum, m) => sum + m.width, 0) + spaceWidth * (words.length - 1);
 
-        let currentX = (canvas.width - totalLineWidth) / 2; // Starting X for the first word to center the line
+        let currentX = (canvas.width - totalLineWidth) / 2;
 
-        const wordHeight = parseFloat(englishFont.match(/(\d*\.?\d*)px/)[1]); // Approximate height for hitboxes
+        const wordHeight = parseFloat(englishFont.match(/(\d*\.?\d*)px/)[1]);
 
         for (let j = 0; j < words.length; j++) {
             let rawWord = words[j];
             let cleanedWordForColor = rawWord.replace(/[^a-zA-Z0-9]/g, "");
             let lowerCleanedWordForColor = cleanedWordForColor.toLowerCase();
 
-            let color = "#fff"; // Default color
+            let color = "#fff";
 
-            // Apply coloring rules
             if (isCurrentBlockContentQuestionType && i === 0 && j === 0 && (isAux(lowerCleanedWordForColor) || isWh(lowerCleanedWordForColor))) {
-                color = "#40b8ff"; // WH/Aux question starter
-            } else if (isVerb(lowerCleanedWordForColor) && !blockContext.verbColored && !isAux(lowerCleanedWordForColor) ) { // Don't color aux verbs yellow
-                color = "#FFD600"; // First main verb
-                blockContext.verbColored = true; // Only color the first verb this way
+                color = "#40b8ff";
+            } else if (isVerb(lowerCleanedWordForColor) && !blockContext.verbColored && !isAux(lowerCleanedWordForColor) ) {
+                color = "#FFD600";
+                blockContext.verbColored = true;
             } else if (isAux(lowerCleanedWordForColor) || isBeen(lowerCleanedWordForColor)) {
-                color = "#40b8ff"; // Other auxiliary verbs or 'been'
+                color = "#40b8ff";
             } else if (isVing(lowerCleanedWordForColor)) {
-                color = "#40b8ff"; // -ing forms (often part of verb phrases)
+                color = "#40b8ff";
             }
 
 
@@ -761,15 +758,15 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
             const measuredWidth = wordMetrics[j].width;
             localWordRects.push({
                 word: rawWord,
-                x: currentX, y: currentLineCenterY, // y is the vertical center of the word
-                w: measuredWidth, h: wordHeight, // Use measured width and estimated height
-                lineIndex: i, // Store line index for translation positioning
-                isQuestionWord: isQuestionBlock // Store if it's part of the question block
+                x: currentX, y: currentLineCenterY,
+                w: measuredWidth, h: wordHeight,
+                lineIndex: i,
+                isQuestionWord: isQuestionBlock
             });
 
-            currentX += measuredWidth + spaceWidth; // Move to next word position
+            currentX += measuredWidth + spaceWidth;
         }
-        lastDrawnTextBottomY = currentLineCenterY + LINE_HEIGHT / 2; // Update bottom Y
+        lastDrawnTextBottomY = currentLineCenterY + LINE_HEIGHT / 2;
     }
     return { lastY: lastDrawnTextBottomY, wordRects: localWordRects };
 }
@@ -778,38 +775,35 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
 function drawPlayButton(buttonRect, baseScaleForOriginalSize) {
     if (!buttonRect) return;
 
-    const visualShrinkFactor = 0.8; // Make the button visually a bit smaller than its hitbox
+    const visualShrinkFactor = 0.8;
     const visualWidth = buttonRect.w * visualShrinkFactor;
     const visualHeight = buttonRect.h * visualShrinkFactor;
-    const visualX = buttonRect.x + (buttonRect.w - visualWidth) / 2; // Center visual part
+    const visualX = buttonRect.x + (buttonRect.w - visualWidth) / 2;
     const visualY = buttonRect.y + (buttonRect.h - visualHeight) / 2;
 
-    const internalElementScale = baseScaleForOriginalSize * visualShrinkFactor; // Scale for inner elements like triangle
+    const internalElementScale = baseScaleForOriginalSize * visualShrinkFactor;
 
     ctx.save();
-    // Background
-    ctx.globalAlpha = Math.min(1.0, centerAlpha + 0.2) * 0.82; // Slightly more opaque than text
-    ctx.fillStyle = "#222"; // Dark background
+    ctx.globalAlpha = Math.min(1.0, centerAlpha + 0.2) * 0.82;
+    ctx.fillStyle = "#222";
     ctx.beginPath();
-    const cornerRadius = 20 * internalElementScale; // Rounded corners scaled
+    const cornerRadius = 20 * internalElementScale;
     ctx.roundRect(visualX, visualY, visualWidth, visualHeight, cornerRadius);
     ctx.fill();
 
-    // Border and Play Triangle
-    ctx.globalAlpha = centerAlpha; // Match text alpha for these
-    ctx.strokeStyle = "#4CAF50"; // Green border
-    ctx.lineWidth = 3 * internalElementScale; // Scaled line width
+    ctx.globalAlpha = centerAlpha;
+    ctx.strokeStyle = "#4CAF50";
+    ctx.lineWidth = 3 * internalElementScale;
     ctx.beginPath();
     ctx.roundRect(visualX, visualY, visualWidth, visualHeight, cornerRadius);
     ctx.stroke();
 
-    ctx.fillStyle = "#4CAF50"; // Green play triangle
+    ctx.fillStyle = "#4CAF50";
     ctx.beginPath();
-    const playSize = 36 * internalElementScale; // Size of the triangle, scaled
-    const btnPad = 18 * internalElementScale;   // Padding inside the button, scaled
-    const triangleSymbolVerticalLineXOffset = 6 * internalElementScale; // Slight offset for better visual centering of triangle
+    const playSize = 36 * internalElementScale;
+    const btnPad = 18 * internalElementScale;
+    const triangleSymbolVerticalLineXOffset = 6 * internalElementScale;
 
-    // Draw triangle points
     ctx.moveTo(visualX + btnPad + triangleSymbolVerticalLineXOffset, visualY + btnPad);
     ctx.lineTo(visualX + btnPad + triangleSymbolVerticalLineXOffset, visualY + visualHeight - btnPad);
     ctx.lineTo(visualX + btnPad + playSize, visualY + visualHeight / 2);
@@ -822,13 +816,13 @@ function drawPlayButton(buttonRect, baseScaleForOriginalSize) {
 
 function drawCenterSentence() {
     if (!currentQuestionSentence && !currentAnswerSentence && !fireworks) {
-        centerSentenceWordRects = []; // Clear rects if nothing to draw
+        centerSentenceWordRects = [];
         return;
     }
 
-    centerSentenceWordRects = []; // Reset for current frame
+    centerSentenceWordRects = [];
     ctx.save();
-    ctx.globalAlpha = centerAlpha; // Apply overall fade for sentence appearance/disappearance
+    ctx.globalAlpha = centerAlpha;
 
     const mainRenderAreaYCenter = topOffset + (canvas.height - topOffset) / 2;
     const questionBlockCenterY = mainRenderAreaYCenter + SENTENCE_VERTICAL_ADJUSTMENT;
@@ -844,25 +838,19 @@ function drawCenterSentence() {
     const btnW_forHitbox = (36 * currentVisualScaleForHitbox) + (18 * currentVisualScaleForHitbox * 2);
     const btnX = 10;
 
-    // --- Draw Question Block ---
     if (currentQuestionSentence) {
-        // Calculate question block height for precise first-line Y calculation
         const questionLinesForHeight = [currentQuestionSentence.line1, currentQuestionSentence.line2].filter(l => l && l.trim());
         const questionBlockActualHeight = questionLinesForHeight.length * LINE_HEIGHT;
-
-        // This is the Y center of the first line of the question block
         const questionFirstLineCenterY = questionBlockCenterY - questionBlockActualHeight / 2 + LINE_HEIGHT / 2;
 
         questionDrawOutput = drawSingleSentenceBlock(currentQuestionSentence, questionBlockCenterY, true, questionBlockContext);
         centerSentenceWordRects.push(...questionDrawOutput.wordRects);
 
-        // Define and draw play button for question, aligned with the first line
         playButtonRectQuestion = { x: btnX, y: questionFirstLineCenterY - btnH_forHitbox / 2, w: btnW_forHitbox, h: btnH_forHitbox };
         if (showPlayButtonQuestion) {
             drawPlayButton(playButtonRectQuestion, currentVisualScaleForHitbox);
         }
 
-        // Draw translation for question if active
         if (showTranslationForQuestion && currentQuestionSentenceIndex !== null && translations[currentQuestionSentenceIndex]) {
             ctx.save();
             ctx.globalAlpha = centerAlpha;
@@ -878,7 +866,6 @@ function drawCenterSentence() {
         }
     }
 
-    // --- Draw Answer Block ---
     if (currentAnswerSentence) {
         const answerLines = [currentAnswerSentence.line1, currentAnswerSentence.line2].filter(l => l && l.trim());
         const answerBlockHeight = answerLines.length * LINE_HEIGHT;
@@ -887,14 +874,11 @@ function drawCenterSentence() {
         if (currentQuestionSentence) {
             topYForAnswerBlock = questionDrawOutput.lastY + ANSWER_OFFSET_Y;
         } else {
-            // If no question, center the answer block like a question block
             topYForAnswerBlock = questionBlockCenterY - (answerBlockHeight / 2);
         }
 
-        // This is the Y center of the first line of the answer block
         const answerFirstLineCenterY = topYForAnswerBlock + LINE_HEIGHT / 2;
 
-        // Define and draw play button for answer, aligned with the first line
         playButtonRect = { x: btnX, y: answerFirstLineCenterY - btnH_forHitbox / 2, w: btnW_forHitbox, h: btnH_forHitbox };
         if (showPlayButton) {
             drawPlayButton(playButtonRect, currentVisualScaleForHitbox);
@@ -904,7 +888,6 @@ function drawCenterSentence() {
         const answerDrawOutput = drawSingleSentenceBlock(currentAnswerSentence, topYForAnswerBlock, false, answerBlockContext);
         centerSentenceWordRects.push(...answerDrawOutput.wordRects);
 
-        // Draw translation for answer if active
         if (showTranslationForAnswer && currentAnswerSentenceIndex !== null && translations[currentAnswerSentenceIndex]) {
             ctx.save();
             ctx.globalAlpha = centerAlpha;
@@ -920,7 +903,6 @@ function drawCenterSentence() {
         }
     }
 
-    // --- Draw Active Word Translation ---
     if (activeWordTranslation && activeWordTranslation.show) {
         ctx.save();
         ctx.globalAlpha = centerAlpha;
@@ -955,12 +937,12 @@ function drawCenterSentence() {
 function drawFireworks() {
   if (!fireworks) return;
   ctx.save();
-  ctx.font = "23.52px Arial"; // Consistent font size with sentences
+  ctx.font = "23.52px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
   fireworks.forEach(fw => {
-    ctx.globalAlpha = 1; // Fireworks words are fully opaque during animation
+    ctx.globalAlpha = 1;
     ctx.fillStyle = fw.color;
     ctx.fillText(fw.text, fw.x, fw.y);
   });
@@ -1438,6 +1420,18 @@ function update(delta) {
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // --- START: 배경 이미지 그리기 ---
+  if (isBackgroundImageLoaded) {
+    ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+  } else {
+    // 이미지가 로드되지 않았을 경우 기본 검은색 배경
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  // --- END: 배경 이미지 그리기 ---
+
+
   ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
 
   enemies.forEach(e => {
@@ -1458,9 +1452,14 @@ function draw() {
       const steamOffsetX = (e.w - steamWidth) / 2;
       const steamOffsetY = -steamHeight * 0.85;
 
+      // --- START: 커피 김 효과에 globalCompositeOperation 적용 ---
+      const prevCompositeOperation = ctx.globalCompositeOperation; // 현재 값 저장
+      ctx.globalCompositeOperation = 'lighter'; // 비디오의 어두운 배경을 밝게 혼합 시도
       ctx.globalAlpha = 0.65;
       ctx.drawImage(coffeeSteamVideo, e.x + steamOffsetX, e.y + steamOffsetY, steamWidth, steamHeight);
-      ctx.globalAlpha = 1.0;
+      ctx.globalAlpha = 1.0; // globalAlpha 초기화
+      ctx.globalCompositeOperation = prevCompositeOperation; // 원래 값으로 복원
+      // --- END: 커피 김 효과에 globalCompositeOperation 적용 ---
     }
   });
 

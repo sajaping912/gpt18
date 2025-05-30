@@ -258,7 +258,7 @@ const bgmFiles = [
 ];
 let bgmIndex = 0;
 let bgmAudio = new Audio(bgmFiles[bgmIndex]);
-bgmAudio.volume = 0.021; 
+bgmAudio.volume = 0.021;
 bgmAudio.loop = true;
 
 const volumeBtn = document.getElementById('volumeBtn');
@@ -281,7 +281,7 @@ async function playSentenceAudio(index) {
 
     const audioFilePath = `sounds/96_audio/${index + 1}.mp3`;
     currentSentenceAudio = new Audio(audioFilePath);
-    currentSentenceAudio.volume = 0.8; 
+    currentSentenceAudio.volume = 0.8;
 
     currentSentenceAudio.onended = () => {
       currentSentenceAudio = null;
@@ -305,7 +305,7 @@ async function playSentenceAudio(index) {
 
 volumeBtn.onclick = function () {
   isMuted = !isMuted;
-  const targetVolume = isMuted ? 0 : 0.021; 
+  const targetVolume = isMuted ? 0 : 0.021;
   if (bgmAudio) {
     bgmAudio.volume = targetVolume;
     if (!isMuted && bgmAudio.paused && isGameRunning && !isGamePaused) {
@@ -326,7 +326,7 @@ sounds.explosion.volume = 0.05;
 
 setInterval(() => {
   if (bgmAudio) {
-    const targetVolume = isMuted ? 0 : 0.021; 
+    const targetVolume = isMuted ? 0 : 0.021;
     if (bgmAudio.volume !== targetVolume) {
       bgmAudio.volume = targetVolume;
     }
@@ -336,7 +336,7 @@ setInterval(() => {
 
 // Asset 로딩 관리
 let allAssetsReady = false;
-let assetsToLoad = 1 + enemyImgs.length + 1; 
+let assetsToLoad = 1 + enemyImgs.length + 1;
 let loadedAssetCount = 0;
 let coffeeVideoAssetReady = false;
 
@@ -387,28 +387,28 @@ if (coffeeSteamVideo) {
 } else {
   // If the video element itself is missing, assume ready without steam effect
   console.warn("coffeeSteamVideo element not found in HTML. Assuming ready without steam effect.");
-  coffeeVideoAssetReady = true; 
+  coffeeVideoAssetReady = true;
   checkAllAssetsReady(); // Ensure this path also calls checkAllAssetsReady
 }
 
 
 const PLAYER_SIZE = 50;
 const ENEMY_SIZE = 40;
-const ENEMY_MOVEMENT_SPEED_PPS = 60; 
+const ENEMY_MOVEMENT_SPEED_PPS = 60;
 
-const MIN_BUBBLE_SIZE = 15; 
-const MAX_BUBBLE_SIZE = 35; 
+const MIN_BUBBLE_SIZE = 15;
+const MAX_BUBBLE_SIZE = 35;
 
-const BUBBLE_BASE_SPEED_Y_PPS = -120; 
-const BUBBLE_SPEED_Y_VARIATION_PPS = 40; 
+const BUBBLE_BASE_SPEED_Y_PPS = -120;
+const BUBBLE_SPEED_Y_VARIATION_PPS = 40;
 
-const BUBBLE_SWAY_FREQUENCY_MIN = 1.5; 
-const BUBBLE_SWAY_FREQUENCY_MAX = 3.5; 
+const BUBBLE_SWAY_FREQUENCY_MIN = 1.5;
+const BUBBLE_SWAY_FREQUENCY_MAX = 3.5;
 
-const BUBBLE_SWAY_AMPLITUDE_FACTOR_MIN = 0.3; 
-const BUBBLE_SWAY_AMPLITUDE_FACTOR_MAX = 0.8; 
+const BUBBLE_SWAY_AMPLITUDE_FACTOR_MIN = 0.3;
+const BUBBLE_SWAY_AMPLITUDE_FACTOR_MAX = 0.8;
 
-const BUBBLE_HORIZONTAL_DRIFT_PPS_MAX = 25; 
+const BUBBLE_HORIZONTAL_DRIFT_PPS_MAX = 25;
 
 // --- START: Cosmos Petal Constants ---
 const PETAL_SIZE = 20; // 코스모스 꽃잎 크기
@@ -421,15 +421,17 @@ const PETAL_FLUTTER_AMPLITUDE_BASE = 3.5; // 꽃잎 상하 떨림 폭
 const PETAL_FLUTTER_SPEED_BASE = 3.0;   // 꽃잎 상하 떨림 속도
 // --- END: Cosmos Petal Constants ---
 
-const SENTENCE_VERTICAL_ADJUSTMENT = -70;
-const ANSWER_OFFSET_Y = 60;
+// --- MODIFICATION: Adjust sentence vertical positioning ---
+const SENTENCE_VERTICAL_ADJUSTMENT = -80; // Changed from -75 (moves question up by 5px)
+const ANSWER_OFFSET_Y = 70;             // Changed from 65 (widens gap by 5px, moving answer down)
+// --- END MODIFICATION ---
 const LINE_HEIGHT = 30;
 const PLAYER_TOUCH_Y_OFFSET = 15;
 
 let player = { x: 0, y: 0, w: PLAYER_SIZE, h: PLAYER_SIZE };
 let bullets = [];
 let enemies = [];
-let enemyBullets = []; 
+let enemyBullets = [];
 let detachedPetals = []; // 떨어진 코스모스 꽃잎을 관리할 배열
 
 let isGameRunning = false;
@@ -479,11 +481,12 @@ const notVerbIng = [
 ];
 
 function isAux(word) {
-  return MODAL_AUX.includes(word.toLowerCase()) || DO_AUX.includes(word.toLowerCase());
+  const lowerWord = word.toLowerCase().replace(/[^a-z0-9']/g, ''); // Keep apostrophe for "won't" etc.
+  return MODAL_AUX.includes(lowerWord) || DO_AUX.includes(lowerWord);
 }
 function isWh(word) {
   const whs = ["what","when","where","who","whom","whose","which","why","how"];
-  return whs.includes(word.toLowerCase());
+  return whs.includes(word.toLowerCase().replace(/[^a-z0-9]/g, ''));
 }
 function isVerb(word) {
   const verbs = [
@@ -491,6 +494,10 @@ function isVerb(word) {
     "allowed", "join", "break", "crash", "do", "fly", "cry", "got", "lost", "visit", "talk", "help", "stuck", "eat",
     "go", "melt", "laugh", "can", "see", "fix", "jump", "practiced", "open", "hear", "find", "hiding", "start",
     "taken", "rolled", "bring", "carry", "set", "keep"
+    // Added 'be' verbs as they can act as main verbs.
+    // Note: 'isAux' will also catch some of these if they are auxiliaries.
+    // The splitting logic will need to be careful.
+    , "be", "is", "am", "are", "was", "were"
   ];
   const lowerWord = word.toLowerCase().replace(/[^a-z0-9]/g, '');
   if (lowerWord === "bringback") return true;
@@ -738,7 +745,7 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
             // Apply coloring rules
             if (isCurrentBlockContentQuestionType && i === 0 && j === 0 && (isAux(lowerCleanedWordForColor) || isWh(lowerCleanedWordForColor))) {
                 color = "#40b8ff"; // WH/Aux question starter
-            } else if (isVerb(lowerCleanedWordForColor) && !blockContext.verbColored) {
+            } else if (isVerb(lowerCleanedWordForColor) && !blockContext.verbColored && !isAux(lowerCleanedWordForColor) ) { // Don't color aux verbs yellow
                 color = "#FFD600"; // First main verb
                 blockContext.verbColored = true; // Only color the first verb this way
             } else if (isAux(lowerCleanedWordForColor) || isBeen(lowerCleanedWordForColor)) {
@@ -746,6 +753,7 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
             } else if (isVing(lowerCleanedWordForColor)) {
                 color = "#40b8ff"; // -ing forms (often part of verb phrases)
             }
+
 
             ctx.fillStyle = color;
             ctx.fillText(rawWord, currentX, currentLineCenterY);
@@ -825,27 +833,31 @@ function drawCenterSentence() {
     const mainRenderAreaYCenter = topOffset + (canvas.height - topOffset) / 2;
     const questionBlockCenterY = mainRenderAreaYCenter + SENTENCE_VERTICAL_ADJUSTMENT;
 
-    let questionBlockContext = { verbColored: false }; // To color only the first verb
-    let questionDrawOutput = { lastY: questionBlockCenterY - LINE_HEIGHT, wordRects: [] }; // Default if no question
+    let questionBlockContext = { verbColored: false };
+    let questionDrawOutput = { lastY: questionBlockCenterY - LINE_HEIGHT, wordRects: [] };
 
-    // --- Define button dimensions based on a scale factor ---
-    const baseOverallScale = 0.49; // Base scale for button elements if they were at original size
-    const visualReductionFactor = 0.8; // How much smaller the button looks than its hitbox
-    const currentVisualScaleForHitbox = baseOverallScale * visualReductionFactor; // Effective scale for hitbox calculations
+    const baseOverallScale = 0.49;
+    const visualReductionFactor = 0.8;
+    const currentVisualScaleForHitbox = baseOverallScale * visualReductionFactor;
 
-    // Calculate button width/height for hitbox based on scaled internal elements
-    const btnH_forHitbox = (36 * currentVisualScaleForHitbox) + (18 * currentVisualScaleForHitbox * 2); // playSize + 2*padding
-    const btnW_forHitbox = (36 * currentVisualScaleForHitbox) + (18 * currentVisualScaleForHitbox * 2); // playSize + 2*padding
-    const btnX = 10; // X position from left edge
+    const btnH_forHitbox = (36 * currentVisualScaleForHitbox) + (18 * currentVisualScaleForHitbox * 2);
+    const btnW_forHitbox = (36 * currentVisualScaleForHitbox) + (18 * currentVisualScaleForHitbox * 2);
+    const btnX = 10;
 
     // --- Draw Question Block ---
     if (currentQuestionSentence) {
+        // Calculate question block height for precise first-line Y calculation
+        const questionLinesForHeight = [currentQuestionSentence.line1, currentQuestionSentence.line2].filter(l => l && l.trim());
+        const questionBlockActualHeight = questionLinesForHeight.length * LINE_HEIGHT;
+
+        // This is the Y center of the first line of the question block
+        const questionFirstLineCenterY = questionBlockCenterY - questionBlockActualHeight / 2 + LINE_HEIGHT / 2;
+
         questionDrawOutput = drawSingleSentenceBlock(currentQuestionSentence, questionBlockCenterY, true, questionBlockContext);
         centerSentenceWordRects.push(...questionDrawOutput.wordRects);
 
-        // Define and draw play button for question
-        const questionButtonActualCenterY = questionBlockCenterY; // Button centered with the question block
-        playButtonRectQuestion = { x: btnX, y: questionButtonActualCenterY - btnH_forHitbox / 2, w: btnW_forHitbox, h: btnH_forHitbox };
+        // Define and draw play button for question, aligned with the first line
+        playButtonRectQuestion = { x: btnX, y: questionFirstLineCenterY - btnH_forHitbox / 2, w: btnW_forHitbox, h: btnH_forHitbox };
         if (showPlayButtonQuestion) {
             drawPlayButton(playButtonRectQuestion, currentVisualScaleForHitbox);
         }
@@ -853,14 +865,14 @@ function drawCenterSentence() {
         // Draw translation for question if active
         if (showTranslationForQuestion && currentQuestionSentenceIndex !== null && translations[currentQuestionSentenceIndex]) {
             ctx.save();
-            ctx.globalAlpha = centerAlpha; // Ensure translation respects fade
+            ctx.globalAlpha = centerAlpha;
             ctx.font = translationFont;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillStyle = "#FFD600"; // Yellow for translation
-            ctx.shadowColor = "#111"; ctx.shadowBlur = 4; // Text shadow for readability
+            ctx.fillStyle = "#FFD600";
+            ctx.shadowColor = "#111"; ctx.shadowBlur = 4;
             const translationTextHeight = parseFloat(translationFont.match(/(\d*\.?\d*)px/)[1]);
-            const translationBelowY = questionDrawOutput.lastY + 10 + translationTextHeight / 2; // Position below sentence
+            const translationBelowY = questionDrawOutput.lastY + 10 + translationTextHeight / 2;
             ctx.fillText(translations[currentQuestionSentenceIndex], canvas.width / 2, translationBelowY);
             ctx.restore();
         }
@@ -873,27 +885,29 @@ function drawCenterSentence() {
         let topYForAnswerBlock;
 
         if (currentQuestionSentence) {
-            topYForAnswerBlock = questionDrawOutput.lastY + ANSWER_OFFSET_Y; // Position below question
+            topYForAnswerBlock = questionDrawOutput.lastY + ANSWER_OFFSET_Y;
         } else {
             // If no question, center the answer block like a question block
             topYForAnswerBlock = questionBlockCenterY - (answerBlockHeight / 2);
         }
 
-        // Define and draw play button for answer
-        const answerButtonActualCenterY = topYForAnswerBlock + answerBlockHeight / 2; // Button centered with the answer block
-        playButtonRect = { x: btnX, y: answerButtonActualCenterY - btnH_forHitbox / 2, w: btnW_forHitbox, h: btnH_forHitbox };
+        // This is the Y center of the first line of the answer block
+        const answerFirstLineCenterY = topYForAnswerBlock + LINE_HEIGHT / 2;
+
+        // Define and draw play button for answer, aligned with the first line
+        playButtonRect = { x: btnX, y: answerFirstLineCenterY - btnH_forHitbox / 2, w: btnW_forHitbox, h: btnH_forHitbox };
         if (showPlayButton) {
             drawPlayButton(playButtonRect, currentVisualScaleForHitbox);
         }
 
-        let answerBlockContext = { verbColored: false }; // Reset for answer block
+        let answerBlockContext = { verbColored: false };
         const answerDrawOutput = drawSingleSentenceBlock(currentAnswerSentence, topYForAnswerBlock, false, answerBlockContext);
         centerSentenceWordRects.push(...answerDrawOutput.wordRects);
 
         // Draw translation for answer if active
         if (showTranslationForAnswer && currentAnswerSentenceIndex !== null && translations[currentAnswerSentenceIndex]) {
             ctx.save();
-            ctx.globalAlpha = centerAlpha; // Ensure translation respects fade
+            ctx.globalAlpha = centerAlpha;
             ctx.font = translationFont;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
@@ -909,33 +923,32 @@ function drawCenterSentence() {
     // --- Draw Active Word Translation ---
     if (activeWordTranslation && activeWordTranslation.show) {
         ctx.save();
-        ctx.globalAlpha = centerAlpha; // Ensure word translation respects fade
-        const wordTransFontFamily = "'Malgun Gothic', 'Nanum Gothic', Arial, sans-serif"; // Korean-friendly font
+        ctx.globalAlpha = centerAlpha;
+        const wordTransFontFamily = "'Malgun Gothic', 'Nanum Gothic', Arial, sans-serif";
         const wordTransFontSize = 16;
         ctx.font = `${wordTransFontSize}px ${wordTransFontFamily}`;
         ctx.textAlign = "center";
-        ctx.fillStyle = "#98FB98"; // Light green for word translation
+        ctx.fillStyle = "#98FB98";
         ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = 2; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
 
-        const englishWordMiddleY = activeWordTranslation.y; // y is already middle
+        const englishWordMiddleY = activeWordTranslation.y;
         const englishWordHalfHeight = activeWordTranslation.h / 2;
-        const padding = 6; // Padding between English word and its translation
+        const padding = 6;
 
-        let tx = activeWordTranslation.x + activeWordTranslation.w / 2; // Center of the English word
+        let tx = activeWordTranslation.x + activeWordTranslation.w / 2;
         let ty;
 
-        // Position translation above or below based on line index
-        if (activeWordTranslation.lineIndex === 0) { // First line of a sentence block
+        if (activeWordTranslation.lineIndex === 0) {
             ctx.textBaseline = "bottom";
             ty = englishWordMiddleY - englishWordHalfHeight - padding;
-        } else { // Second line of a sentence block
+        } else {
             ctx.textBaseline = "top";
             ty = englishWordMiddleY + englishWordHalfHeight + padding;
         }
         ctx.fillText(activeWordTranslation.translation, tx, ty);
         ctx.restore();
     }
-    ctx.restore(); // Restore globalAlpha and other canvas states
+    ctx.restore();
 }
 
 
@@ -955,21 +968,108 @@ function drawFireworks() {
   ctx.restore();
 }
 
-function splitSentence(sentenceText) {
-  if (!sentenceText) return ["", ""];
-  const words = sentenceText.split(" ");
-  // If sentence is short (<=4 words and < 35 chars), keep it on one line.
-  if (words.length <= 4 && sentenceText.length < 35) {
-      return [sentenceText, ""];
-  }
-  // Otherwise, split roughly in half by word count.
-  const half = Math.ceil(words.length / 2);
-  const line1 = words.slice(0, half).join(" ");
-  const line2 = words.slice(half).join(" ");
-  return [line1, line2];
+function splitSentence(sentenceText, isCurrentlyQuestion = null) {
+    if (!sentenceText) return ["", ""];
+    const words = sentenceText.trim().split(" ");
+    const originalSentenceForShortCheck = sentenceText.trim();
+
+    const isEffectiveQuestionType = (isCurrentlyQuestion !== null) ? isCurrentlyQuestion : originalSentenceForShortCheck.endsWith('?');
+
+    if (words.length <= 4 && originalSentenceForShortCheck.length < 35) {
+        return [originalSentenceForShortCheck, ""];
+    }
+
+    let line1Words = [];
+    let line2Words = [];
+
+    if (isEffectiveQuestionType) {
+        if (words.length > 0) {
+            if (isWh(words[0])) {
+                line1Words.push(words[0]);
+                if (words.length > 1 && isAux(words[1])) {
+                    line1Words.push(words[1]);
+                    if (words.length > 2) {
+                        line1Words.push(words[2]);
+                    }
+                } else if (words.length > 1) {
+                    line1Words.push(words[1]);
+                }
+            } else if (isAux(words[0])) {
+                line1Words.push(words[0]);
+                if (words.length > 1) {
+                    line1Words.push(words[1]);
+                }
+            }
+        }
+
+        if (line1Words.length > 0 && line1Words.length < words.length) {
+            line2Words = words.slice(line1Words.length);
+        } else if (line1Words.length === words.length && line1Words.length > 0) {
+            line2Words = [];
+        } else {
+            const half = Math.ceil(words.length / 2);
+            line1Words = words.slice(0, half > 0 ? half : (words.length > 0 ? 1 : 0) );
+            line2Words = words.slice(line1Words.length);
+        }
+
+    } else { // Answer sentence
+        let subjectEndIndex = -1;
+        for (let i = 0; i < words.length; i++) {
+            const currentWordClean = words[i].toLowerCase().replace(/[^a-z0-9']/g, '');
+            if (isAux(currentWordClean) || isVerb(currentWordClean) || isVing(currentWordClean) || isBeen(currentWordClean)) {
+                subjectEndIndex = i;
+                break;
+            }
+        }
+
+        if (subjectEndIndex === -1 && words.length > 0) {
+            subjectEndIndex = words.length;
+        }
+
+
+        if (subjectEndIndex >= 0) {
+            line1Words = words.slice(0, subjectEndIndex);
+            let currentIndex = subjectEndIndex;
+
+            if (currentIndex < words.length && isAux(words[currentIndex])) {
+                line1Words.push(words[currentIndex]);
+                currentIndex++;
+            }
+
+            if (currentIndex < words.length && (isVerb(words[currentIndex]) || isVing(words[currentIndex]) || isBeen(words[currentIndex]))) {
+                let alreadyAddedAsAux = false;
+                if (line1Words.length > subjectEndIndex) {
+                    const lastWordInL1 = line1Words[line1Words.length - 1];
+                    if (lastWordInL1.toLowerCase().replace(/[^a-z0-9']/g, '') === words[currentIndex].toLowerCase().replace(/[^a-z0-9']/g, '') && isAux(lastWordInL1)) {
+                        alreadyAddedAsAux = true;
+                    }
+                }
+                if (!alreadyAddedAsAux) {
+                    line1Words.push(words[currentIndex]);
+                }
+            }
+        }
+
+        if (line1Words.length > 0 && line1Words.length < words.length) {
+            line2Words = words.slice(line1Words.length);
+        } else if (line1Words.length === words.length && line1Words.length > 0) {
+            line2Words = [];
+        } else {
+            const half = Math.ceil(words.length / 2);
+            line1Words = words.slice(0, half > 0 ? half : (words.length > 0 ? 1 : 0) );
+            line2Words = words.slice(line1Words.length);
+        }
+    }
+
+    if (line1Words.length === 0 && words.length > 0) {
+        const half = Math.max(1, Math.ceil(words.length / 2));
+        line1Words = words.slice(0, half);
+        line2Words = words.slice(half);
+    }
+
+    return [line1Words.join(" "), line2Words.join(" ").trim()];
 }
 
-// Helper to get angles for firework explosion (clockwise from top)
 function getClockwiseAngle(index, total) {
   return -Math.PI / 2 + (index * 2 * Math.PI) / total;
 }
@@ -977,70 +1077,51 @@ function getClockwiseAngle(index, total) {
 
 function startFireworks(sentenceTextForFireworks, globalSentenceIndex, explosionX, explosionY) {
     let roleOfNewSentence;
-    let questionTextForLayout = ""; // Used if the new sentence is an answer, to position it correctly
+    let questionTextForLayout = "";
 
-    // Determine if the new sentence is a question or an answer based on its global index
-    if (globalSentenceIndex % 2 === 0) { // Even index = question
-        roleOfNewSentence = 'question';
-    } else { // Odd index = answer
-        roleOfNewSentence = 'answer';
-    }
+    const isNewSentenceQuestion = globalSentenceIndex % 2 === 0;
+    roleOfNewSentence = isNewSentenceQuestion ? 'question' : 'answer';
 
-    // --- State Reset based on new sentence role ---
+
     if (roleOfNewSentence === 'question') {
-        // New question: Clear both current question and answer, hide all buttons and translations
         currentQuestionSentence = null; currentAnswerSentence = null;
         currentQuestionSentenceIndex = null; currentAnswerSentenceIndex = null;
         showPlayButton = false; showPlayButtonQuestion = false;
         showTranslationForQuestion = false; showTranslationForAnswer = false;
-    } else { // New sentence is an answer
-        // If there was a preceding question, try to keep it displayed
+    } else {
         if (currentQuestionSentence && currentQuestionSentenceIndex === globalSentenceIndex - 1) {
-            // The current question is indeed the one preceding this answer
             questionTextForLayout = (currentQuestionSentence.line1 + " " + currentQuestionSentence.line2).trim();
-            // Keep showPlayButtonQuestion as is (should be true if question is visible)
-            // Keep showTranslationForQuestion as is
         } else if (globalSentenceIndex > 0 && sentences[globalSentenceIndex - 1]) {
-            // Current question isn't set or doesn't match, but a preceding sentence exists in data
-            // We'll need to reconstruct it later if we want to show it. For layout, just get its text.
             questionTextForLayout = sentences[globalSentenceIndex - 1];
-            // Since we might be re-showing the question, assume its button and translation are off for now
-            // showPlayButtonQuestion = true; // Will be set when question is actually drawn
-            // showTranslationForQuestion = false;
         } else {
-            questionTextForLayout = " "; // No preceding question context
+            questionTextForLayout = " ";
         }
-        // Clear current answer, its button, and its translation
         currentAnswerSentence = null; currentAnswerSentenceIndex = null;
-        showPlayButton = false; // Answer's play button
-        // showTranslationForQuestion = false; // Handled above or by question display logic
+        showPlayButton = false;
         showTranslationForAnswer = false;
     }
 
-    // Clear any active word translation popup
     if (activeWordTranslation) activeWordTranslation.show = false;
     activeWordTranslation = null;
     if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
 
-    centerSentenceWordRects = []; // Clear clickable word areas
+    centerSentenceWordRects = [];
 
-    // --- Prepare fireworks words ---
-    const [fireworkLine1, fireworkLine2] = splitSentence(sentenceTextForFireworks);
+    const [fireworkLine1, fireworkLine2] = splitSentence(sentenceTextForFireworks, isNewSentenceQuestion);
     const wordsForFireworks = [];
     if (fireworkLine1.trim()) wordsForFireworks.push(...fireworkLine1.split(" ").map(word => ({ word, row: 0 })));
     if (fireworkLine2.trim()) wordsForFireworks.push(...fireworkLine2.split(" ").map(word => ({ word, row: 1 })));
 
-    if(wordsForFireworks.length === 0) { // Should not happen if sentenceText is valid
+    if(wordsForFireworks.length === 0) {
         sentenceActive = false; return;
     }
 
-    // --- Fireworks animation parameters ---
-    const baseRadius = 51.2 * 0.88; const maxRadius = 120.96 * 0.88; // Radii for explosion
-    let centerX = explosionX; const margin = 8; // Ensure fireworks stay on screen
+    const baseRadius = 51.2 * 0.88; const maxRadius = 120.96 * 0.88;
+    let centerX = explosionX; const margin = 8;
     if (centerX - maxRadius < margin) centerX = margin + maxRadius;
     if (centerX + maxRadius > canvas.width - margin) centerX = canvas.width - margin - maxRadius;
 
-    fireworks = []; // Array to hold individual firework word objects
+    fireworks = [];
     fireworksState = {
         t: 0, phase: "explode", holdDuration: 60, explodeDuration: 180, gatherDuration: 45,
         originX: centerX, originY: explosionY,
@@ -1049,61 +1130,57 @@ function startFireworks(sentenceTextForFireworks, globalSentenceIndex, explosion
         roleOfNewSentence: roleOfNewSentence,
     };
 
-    // --- Calculate final Y positions for words (targetY) ---
     const mainRenderAreaYCenter = topOffset + (canvas.height - topOffset) / 2;
-    const [sL1_fw, sL2_fw] = splitSentence(sentenceTextForFireworks); // Split the incoming sentence
+    const [sL1_fw, sL2_fw] = splitSentence(sentenceTextForFireworks, isNewSentenceQuestion);
     const sLines_fw = [sL1_fw, sL2_fw].filter(l => l && l.trim());
-    const sentenceBlockFinalHeight_fw = sLines_fw.length * LINE_HEIGHT; // Height of the new sentence block
+    const sentenceBlockFinalHeight_fw = sLines_fw.length * LINE_HEIGHT;
 
     for (let j = 0; j < wordsForFireworks.length; j++) {
         const angle = getClockwiseAngle(j, wordsForFireworks.length);
         const color = burstColors[j % burstColors.length];
-        let wordTargetY; // Final Y position for this word in the sentence line
+        let wordTargetY;
 
         if (roleOfNewSentence === 'question') {
             const qBlockFinalCenterY = mainRenderAreaYCenter + SENTENCE_VERTICAL_ADJUSTMENT;
-            // Y for word in question: centered block, then offset by row and half line height
             wordTargetY = qBlockFinalCenterY - sentenceBlockFinalHeight_fw / 2 + (wordsForFireworks[j].row * LINE_HEIGHT) + (LINE_HEIGHT / 2);
-        } else { // New sentence is an answer
-            // Need to determine the Y position of the preceding question block to place answer below it
-            const [qTextL1_layout, qTextL2_layout] = splitSentence(questionTextForLayout);
+        } else {
+            const [qTextL1_layout, qTextL2_layout] = splitSentence(questionTextForLayout, true);
             const qTextLines_layout = [qTextL1_layout, qTextL2_layout].filter(l => l && l.trim());
             const questionBlockActualHeight_layout = qTextLines_layout.length * LINE_HEIGHT;
             const questionBlockActualCenterY_layout = mainRenderAreaYCenter + SENTENCE_VERTICAL_ADJUSTMENT;
             const questionBlockActualBottomY_layout = questionBlockActualCenterY_layout + questionBlockActualHeight_layout / 2;
 
             let answerBlockFinalTopY_fw;
-            if (qTextLines_layout.length > 0) { // If there was a question
+            if (qTextLines_layout.length > 0) {
                 answerBlockFinalTopY_fw = questionBlockActualBottomY_layout + ANSWER_OFFSET_Y;
-            } else { // No preceding question, center the answer like a question
+            } else {
                 answerBlockFinalTopY_fw = questionBlockActualCenterY_layout - sentenceBlockFinalHeight_fw / 2;
             }
-            // Y for word in answer: top of answer block, then offset by row and half line height
             wordTargetY = answerBlockFinalTopY_fw + (wordsForFireworks[j].row * LINE_HEIGHT) + (LINE_HEIGHT / 2);
         }
 
         fireworks.push({
             text: wordsForFireworks[j].word, angle: angle, rowInSentence: wordsForFireworks[j].row,
-            x: centerX, y: explosionY, // Start at explosion point
+            x: centerX, y: explosionY,
             radius: baseRadius, maxRadius: maxRadius,
             color: color,
-            targetX: 0, // targetX will be calculated during "gather" phase
-            targetY: wordTargetY, // Final Y position
+            targetX: 0,
+            targetY: wordTargetY,
         });
     }
-    sentenceActive = true; centerAlpha = 1.0; // Start fireworks animation
+    sentenceActive = true; centerAlpha = 1.0;
 }
 
 
 function updateFireworks() {
-  if (!fireworks || !fireworksState) return false; // Not active
+  if (!fireworks || !fireworksState) return false;
 
-  fireworksState.t++; // Increment frame counter for current phase
+  fireworksState.t++;
 
   if (fireworksState.phase === "explode") {
     const progress = Math.min(fireworksState.t / fireworksState.explodeDuration, 1);
-    const ease = 1 - Math.pow(1 - progress, 2); // Ease-out quadratic
-    const currentRadius = 51.2 * 0.88 + (120.96 * 0.88 - 51.2 * 0.88) * ease; // Interpolate radius
+    const ease = 1 - Math.pow(1 - progress, 2);
+    const currentRadius = 51.2 * 0.88 + (120.96 * 0.88 - 51.2 * 0.88) * ease;
 
     fireworks.forEach((fw) => {
       fw.radius = currentRadius;
@@ -1115,18 +1192,17 @@ function updateFireworks() {
   } else if (fireworksState.phase === "hold") {
     if (fireworksState.t >= fireworksState.holdDuration) {
       fireworksState.phase = "gather"; fireworksState.t = 0;
-      centerAlpha = 0; // Start fading in the actual sentence text
+      centerAlpha = 0;
     }
   } else if (fireworksState.phase === "gather") {
     const progress = Math.min(fireworksState.t / fireworksState.gatherDuration, 1);
-    const ease = Math.pow(progress, 2); // Ease-in quadratic for gathering
+    const ease = Math.pow(progress, 2);
 
-    // Calculate target X positions for words in the final sentence layout
-    // This needs to be done once or kept stable during gather phase.
-    // For simplicity, calculating it here repeatedly, but could be pre-calculated.
-    const tempCtx = canvas.getContext('2d'); // Use a temporary context for text measurement
+    const tempCtx = canvas.getContext('2d');
     tempCtx.font = englishFont;
-    const [sentenceLine1Gather, sentenceLine2Gather] = splitSentence(fireworksState.sentenceTextToDisplayAfter);
+    const isGatherSentenceQuestion = fireworksState.roleOfNewSentence === 'question';
+    const [sentenceLine1Gather, sentenceLine2Gather] = splitSentence(fireworksState.sentenceTextToDisplayAfter, isGatherSentenceQuestion);
+
     let sentenceLineWordArrays = [];
     if(sentenceLine1Gather.trim()) sentenceLineWordArrays.push(sentenceLine1Gather.split(" "));
     if(sentenceLine2Gather.trim()) sentenceLineWordArrays.push(sentenceLine2Gather.split(" "));
@@ -1137,83 +1213,73 @@ function updateFireworks() {
         let wordMetrics = wordsInLine.map(w => tempCtx.measureText(w));
         let spaceWidth = tempCtx.measureText(" ").width;
         let totalLineWidth = wordMetrics.reduce((sum, m) => sum + m.width, 0) + spaceWidth * (wordsInLine.length - 1);
-        let currentXTargetForLineStart = (canvas.width - totalLineWidth) / 2; // Start X for the line
+        let currentXTargetForLineStart = (canvas.width - totalLineWidth) / 2;
 
         for (let j = 0; j < wordsInLine.length; j++) {
             if (fireworks[wordIndexInFireworks]) {
-                // Calculate the starting X of the current word in its line
                 const wordStartTargetX = currentXTargetForLineStart + wordMetrics.slice(0, j).reduce((sum, m) => sum + m.width + spaceWidth, 0);
-                fireworks[wordIndexInFireworks].targetX = wordStartTargetX; // This is the left edge of the word
+                fireworks[wordIndexInFireworks].targetX = wordStartTargetX;
             }
             wordIndexInFireworks++;
         }
     }
 
-    // Interpolate position of each firework word towards its target
     fireworks.forEach((fw) => {
-      // For targetX, we need to draw the word starting at targetX, not centered on it.
-      // The .x, .y in fireworks are for drawing with fillText(text, x, y) where x,y is the start.
-      // However, the drawFireworks function uses textAlign="center".
-      // Let's adjust: targetX should be the center of the word.
       const wordWidth = tempCtx.measureText(fw.text).width;
       const centeredTargetX = fw.targetX + wordWidth / 2;
-
-      fw.x += (centeredTargetX - fw.x) * ease * 0.2; // Slower interpolation for smoother gather
+      fw.x += (centeredTargetX - fw.x) * ease * 0.2;
       fw.y += (fw.targetY - fw.y) * ease * 0.2;
     });
-    centerAlpha += (1.0 - centerAlpha) * ease * 0.15; // Fade in the sentence text
+    centerAlpha += (1.0 - centerAlpha) * ease * 0.15;
 
-    if (progress >= 1) { // Gather complete
+    if (progress >= 1) {
         fireworksState.phase = "done";
         const newSentenceText = fireworksState.sentenceTextToDisplayAfter;
         const newSentenceIndex = fireworksState.finalSentenceIndex;
         const roleOfNewSentence = fireworksState.roleOfNewSentence;
+        const isFinalSentenceQuestion = roleOfNewSentence === 'question';
 
-        const [newLine1, newLine2] = splitSentence(newSentenceText);
+        const [newLine1, newLine2] = splitSentence(newSentenceText, isFinalSentenceQuestion);
         const newSentenceObject = { line1: newLine1, line2: newLine2 };
         let playAudioForThisSentence = false;
 
         if (roleOfNewSentence === 'question') {
             currentQuestionSentence = newSentenceObject; currentQuestionSentenceIndex = newSentenceIndex;
-            currentAnswerSentence = null; currentAnswerSentenceIndex = null; // Ensure answer is cleared
-            showPlayButton = false; showPlayButtonQuestion = true; // Show Q button, hide A button
+            currentAnswerSentence = null; currentAnswerSentenceIndex = null;
+            showPlayButton = false; showPlayButtonQuestion = true;
             playAudioForThisSentence = true;
-        } else { // Role is 'answer'
+        } else {
             const questionIndexOfThisAnswer = newSentenceIndex - 1;
-            // Ensure the preceding question is displayed
             if (questionIndexOfThisAnswer >= 0 && sentences[questionIndexOfThisAnswer]) {
-                // If currentQuestion isn't already set or is wrong, set it
                 if (!currentQuestionSentence || currentQuestionSentenceIndex !== questionIndexOfThisAnswer) {
-                    const [qL1, qL2] = splitSentence(sentences[questionIndexOfThisAnswer]);
+                    const [qL1, qL2] = splitSentence(sentences[questionIndexOfThisAnswer], true);
                     currentQuestionSentence = {line1: qL1, line2: qL2};
                     currentQuestionSentenceIndex = questionIndexOfThisAnswer;
                 }
-                 showPlayButtonQuestion = true; // Always show Q button if Q exists
-            } else { // No valid preceding question
+                 showPlayButtonQuestion = true;
+            } else {
                 currentQuestionSentence = null; currentQuestionSentenceIndex = null;
                 showPlayButtonQuestion = false;
             }
             currentAnswerSentence = newSentenceObject; currentAnswerSentenceIndex = newSentenceIndex;
-            showPlayButton = true; // Show A button
+            showPlayButton = true;
             playAudioForThisSentence = true;
         }
 
-        centerAlpha = 1.0; // Ensure fully visible
-        fireworks = null; fireworksState = null; sentenceActive = false; // Fireworks animation ends
+        centerAlpha = 1.0;
+        fireworks = null; fireworksState = null; sentenceActive = false;
 
-        // Clear any residual word translation pop-ups
         if (activeWordTranslation) activeWordTranslation.show = false;
         activeWordTranslation = null; if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
 
-        // Play audio for the newly displayed sentence
         if (playAudioForThisSentence) {
             let audioIndexToPlay = null;
             if (roleOfNewSentence === 'question' && currentQuestionSentenceIndex !== null) audioIndexToPlay = currentQuestionSentenceIndex;
             else if (roleOfNewSentence === 'answer' && currentAnswerSentenceIndex !== null) audioIndexToPlay = currentAnswerSentenceIndex;
 
             if (audioIndexToPlay !== null) {
-                setTimeout(() => { // Short delay for visual settlement
-                    window.speechSynthesis.cancel(); // Stop any ongoing TTS
+                setTimeout(() => {
+                    window.speechSynthesis.cancel();
                     playSentenceAudio(audioIndexToPlay)
                         .catch(err => console.error(`Error playing sentence audio for index ${audioIndexToPlay} from fireworks:`, err));
                 }, 300);
@@ -1228,135 +1294,113 @@ function spawnEnemy() {
   const idx = Math.floor(Math.random() * enemyImgs.length);
   const img = enemyImgs[idx];
   const x = Math.random() * (canvas.width - ENEMY_SIZE);
-  const spawnYMax = canvas.height * 0.2; // Spawn in the top 20% of the game area below controls
-  const y = topOffset + Math.random() * spawnYMax + 20; // Ensure some margin from very top
+  const spawnYMax = canvas.height * 0.2;
+  const y = topOffset + Math.random() * spawnYMax + 20;
 
   let enemy = {
     x, y, w: ENEMY_SIZE, h: ENEMY_SIZE, img, shot: false, imgIndex: idx,
-    baseY: y, 
-    initialX: x, 
-    rotation: 0 
+    baseY: y,
+    initialX: x,
+    rotation: 0
   };
 
-  if (idx === 3) { // Maple Leaf (enemy4.png)
+  if (idx === 3) { // Maple Leaf
     enemy.swayAngle = Math.random() * Math.PI * 2;
-    enemy.swaySpeed = (Math.random() * 2 + 1.5) * (Math.random() > 0.5 ? 1 : -1); 
-    enemy.swayAmplitude = Math.random() * 20 + 20; 
-    enemy.driftXPerSecond = (Math.random() - 0.5) * 60; 
+    enemy.swaySpeed = (Math.random() * 2 + 1.5) * (Math.random() > 0.5 ? 1 : -1);
+    enemy.swayAmplitude = Math.random() * 20 + 20;
+    enemy.driftXPerSecond = (Math.random() - 0.5) * 60;
     enemy.flutterAngle = Math.random() * Math.PI * 2;
-    enemy.flutterSpeed = Math.random() * 5 + 3; 
-    enemy.flutterAmplitude = Math.random() * 3 + 3; 
-  } else if (idx === 2) { // Cosmos Flower (enemy3.png)
-    enemy.rotationSpeed = (Math.random() * 0.8 + 0.4) * (Math.random() > 0.5 ? 1 : -1); 
-    enemy.driftXPerSecond = (Math.random() - 0.5) * 20; 
+    enemy.flutterSpeed = Math.random() * 5 + 3;
+    enemy.flutterAmplitude = Math.random() * 3 + 3;
+  } else if (idx === 2) { // Cosmos Flower
+    enemy.rotationSpeed = (Math.random() * 0.8 + 0.4) * (Math.random() > 0.5 ? 1 : -1);
+    enemy.driftXPerSecond = (Math.random() - 0.5) * 20;
     enemy.swayAngle = Math.random() * Math.PI * 2;
-    enemy.swaySpeed = (Math.random() * 0.8 + 0.4); 
-    enemy.swayAmplitude = Math.random() * 10 + 5; 
+    enemy.swaySpeed = (Math.random() * 0.8 + 0.4);
+    enemy.swayAmplitude = Math.random() * 10 + 5;
 
-    // --- START: Spawn a detached petal for Cosmos ---
     const petal = {
-        x: enemy.x + enemy.w / 2 - PETAL_SIZE / 2, // Start near flower center
+        x: enemy.x + enemy.w / 2 - PETAL_SIZE / 2,
         y: enemy.y + enemy.h / 2,
         w: PETAL_SIZE,
         h: PETAL_SIZE,
-        img: enemyImgs[2], // Use the cosmos image, will be drawn smaller
-        
-        baseY: enemy.y + enemy.h / 2, // Base for vertical movement
-        initialX: enemy.x + enemy.w / 2 - PETAL_SIZE / 2, // Base for horizontal movement
-        
+        img: enemyImgs[2],
+        baseY: enemy.y + enemy.h / 2,
+        initialX: enemy.x + enemy.w / 2 - PETAL_SIZE / 2,
         rotation: Math.random() * Math.PI * 2,
         rotationSpeed: (Math.random() - 0.5) * PETAL_ROTATION_SPEED_BASE * 2 + (Math.random() > 0.5 ? 0.3 : -0.3),
-
         swayAngle: Math.random() * Math.PI * 2,
         swaySpeed: (Math.random() * 0.5 + 0.75) * PETAL_SWAY_SPEED_BASE * (Math.random() > 0.5 ? 1 : -1),
         swayAmplitude: Math.random() * (PETAL_SWAY_AMPLITUDE_BASE * 0.6) + (PETAL_SWAY_AMPLITUDE_BASE * 0.7),
-
         driftXPerSecond: (Math.random() - 0.5) * PETAL_DRIFT_X_PPS_BASE * 1.5,
-
         flutterAngle: Math.random() * Math.PI * 2,
         flutterSpeed: (Math.random() * 0.8 + 0.6) * PETAL_FLUTTER_SPEED_BASE,
         flutterAmplitude: Math.random() * (PETAL_FLUTTER_AMPLITUDE_BASE * 0.5) + (PETAL_FLUTTER_AMPLITUDE_BASE * 0.5),
-        
-        fallSpeedPPS: PETAL_FALL_SPEED_PPS * (Math.random() * 0.4 + 0.8) // Vary fall speed slightly
+        fallSpeedPPS: PETAL_FALL_SPEED_PPS * (Math.random() * 0.4 + 0.8)
     };
     detachedPetals.push(petal);
-    // --- END: Spawn a detached petal for Cosmos ---
   }
   enemies.push(enemy);
 }
 
 function update(delta) {
-  // Filter enemies that are off-screen (below)
-  enemies = enemies.filter(e => e.y <= canvas.height + e.h); 
-  // Spawn new enemies if count is low
+  enemies = enemies.filter(e => e.y <= canvas.height + e.h);
   while (enemies.length < 2) spawnEnemy();
 
   enemies.forEach(e => {
     const deltaTimeSeconds = delta / 1000.0;
-    e.baseY += ENEMY_MOVEMENT_SPEED_PPS * deltaTimeSeconds; // Basic downward movement
-    
-    let newX = e.x; 
+    e.baseY += ENEMY_MOVEMENT_SPEED_PPS * deltaTimeSeconds;
+
+    let newX = e.x;
     let newY = e.baseY;
 
-    if (e.imgIndex === 3) { // Maple Leaf (enemy4.png)
+    if (e.imgIndex === 3) { // Maple Leaf
       e.initialX += e.driftXPerSecond * deltaTimeSeconds;
       e.swayAngle += e.swaySpeed * deltaTimeSeconds;
       newX = e.initialX + Math.sin(e.swayAngle) * e.swayAmplitude;
-      e.rotation = Math.sin(e.swayAngle * 0.7) * 0.7; 
+      e.rotation = Math.sin(e.swayAngle * 0.7) * 0.7;
       e.flutterAngle += e.flutterSpeed * deltaTimeSeconds;
       newY = e.baseY + Math.sin(e.flutterAngle) * e.flutterAmplitude;
-    } else if (e.imgIndex === 2) { // Cosmos Flower (enemy3.png)
+    } else if (e.imgIndex === 2) { // Cosmos Flower
       e.initialX += e.driftXPerSecond * deltaTimeSeconds;
-      e.rotation += e.rotationSpeed * deltaTimeSeconds; 
+      e.rotation += e.rotationSpeed * deltaTimeSeconds;
       e.swayAngle += e.swaySpeed * deltaTimeSeconds;
       newX = e.initialX + Math.sin(e.swayAngle) * e.swayAmplitude;
-      // newY remains e.baseY for the main cosmos flower
     }
-    // For other enemies (imgIndex 0, 1, 4), they fall straight based on e.baseY and their initial spawn x.
-    
     e.x = newX;
     e.y = newY;
   });
 
 
-  bullets = bullets.filter(b => b.y + b.h > 0); 
+  bullets = bullets.filter(b => b.y + b.h > 0);
   bullets.forEach(b => {
-    b.timeAlive += delta; 
-    const deltaTimeSeconds = delta / 1000.0; 
+    b.timeAlive += delta;
+    const deltaTimeSeconds = delta / 1000.0;
     b.y += b.velocityY * deltaTimeSeconds;
     b.baseX += b.driftXPerSecond * deltaTimeSeconds;
     const swayOffset = Math.sin( (b.timeAlive / 1000.0) * b.swayFrequency + b.swayPhaseOffset ) * b.swayAmplitude;
-    b.x = b.baseX + swayOffset; 
+    b.x = b.baseX + swayOffset;
   });
 
-  // --- START: Update Detached Cosmos Petals ---
   detachedPetals.forEach((p, index) => {
       const deltaTimeSeconds = delta / 1000.0;
-
       p.baseY += p.fallSpeedPPS * deltaTimeSeconds;
       p.initialX += p.driftXPerSecond * deltaTimeSeconds;
-
       p.swayAngle += p.swaySpeed * deltaTimeSeconds;
       let currentX = p.initialX + Math.sin(p.swayAngle) * p.swayAmplitude;
-      
       p.flutterAngle += p.flutterSpeed * deltaTimeSeconds;
       let currentY = p.baseY + Math.sin(p.flutterAngle) * p.flutterAmplitude;
-
       p.rotation += p.rotationSpeed * deltaTimeSeconds;
-
       p.x = currentX;
       p.y = currentY;
-
-      // Note: Splicing inside forEach can be tricky. Filtering after is safer.
   });
-  detachedPetals = detachedPetals.filter(p => p.y <= canvas.height + p.h); // Remove petals off-screen
-  // --- END: Update Detached Cosmos Petals ---
+  detachedPetals = detachedPetals.filter(p => p.y <= canvas.height + p.h);
 
   enemyBullets = enemyBullets.filter(b => b.y < canvas.height).map(b => { b.y += b.speed; return b; });
 
   bullets.forEach((b, bi) => {
     enemies.forEach((e, ei) => {
-      const collisionPaddingFactor = 0.25; 
+      const collisionPaddingFactor = 0.25;
       const coreBulletOffsetX = b.w * collisionPaddingFactor;
       const coreBulletOffsetY = b.h * collisionPaddingFactor;
       const coreBulletX = b.x + coreBulletOffsetX;
@@ -1368,29 +1412,27 @@ function update(delta) {
           coreBulletX + coreBulletWidth > e.x &&
           coreBulletY < e.y + e.h &&
           coreBulletY + coreBulletHeight > e.y) {
-        if (!sentenceActive) { // Only trigger fireworks if no sentence is currently active
+        if (!sentenceActive) {
             const sentenceToFirework = sentences[sentenceIndex];
-            const globalIndexOfSentence = sentenceIndex; // Current index before increment
+            const globalIndexOfSentence = sentenceIndex;
             startFireworks(sentenceToFirework, globalIndexOfSentence, e.x + e.w / 2, e.y + e.h / 2);
-            sentenceIndex = (sentenceIndex + 1) % sentences.length; // Move to next sentence
-            localStorage.setItem('sentenceIndex', sentenceIndex.toString()); // Save new index
+            sentenceIndex = (sentenceIndex + 1) % sentences.length;
+            localStorage.setItem('sentenceIndex', sentenceIndex.toString());
             sounds.explosion.play();
         }
         enemies.splice(ei, 1); bullets.splice(bi, 1);
       }
     });
   });
-  if (sentenceActive) updateFireworks(); // Update fireworks if they are running
+  if (sentenceActive) updateFireworks();
 
-  // Manage visibility of play buttons and translations when no fireworks are active
   if (!currentQuestionSentence && !currentAnswerSentence && !sentenceActive) {
     showPlayButton = false; showPlayButtonQuestion = false;
     showTranslationForQuestion = false; showTranslationForAnswer = false;
     if (activeWordTranslation) activeWordTranslation.show = false;
-  } else if (!sentenceActive) { // Sentences might be displayed but no fireworks
+  } else if (!sentenceActive) {
       showPlayButtonQuestion = !!currentQuestionSentence;
       showPlayButton = !!currentAnswerSentence;
-      // Translations visibility is handled by clicks/taps
   }
 }
 
@@ -1399,26 +1441,26 @@ function draw() {
   ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
 
   enemies.forEach(e => {
-    if (e.imgIndex === 2 || e.imgIndex === 3) { // Cosmos or Maple Leaf - apply rotation
+    if (e.imgIndex === 2 || e.imgIndex === 3) {
       ctx.save();
       ctx.translate(e.x + e.w / 2, e.y + e.h / 2);
       ctx.rotate(e.rotation);
       ctx.drawImage(e.img, -e.w / 2, -e.h / 2, e.w, e.h);
       ctx.restore();
     } else {
-      ctx.drawImage(e.img, e.x, e.y, e.w, e.h); // Other enemies draw normally
+      ctx.drawImage(e.img, e.x, e.y, e.w, e.h);
     }
 
     if (e.imgIndex === 1 && coffeeSteamVideo && coffeeSteamVideo.readyState >= HTMLVideoElement.HAVE_ENOUGH_DATA && !coffeeSteamVideo.paused) {
-      const steamScale = 0.5; 
-      const steamWidth = e.w * steamScale * 1.5; 
-      const steamHeight = e.h * steamScale * 1.6; 
-      const steamOffsetX = (e.w - steamWidth) / 2; 
-      const steamOffsetY = -steamHeight * 0.85; 
+      const steamScale = 0.5;
+      const steamWidth = e.w * steamScale * 1.5;
+      const steamHeight = e.h * steamScale * 1.6;
+      const steamOffsetX = (e.w - steamWidth) / 2;
+      const steamOffsetY = -steamHeight * 0.85;
 
-      ctx.globalAlpha = 0.65; 
+      ctx.globalAlpha = 0.65;
       ctx.drawImage(coffeeSteamVideo, e.x + steamOffsetX, e.y + steamOffsetY, steamWidth, steamHeight);
-      ctx.globalAlpha = 1.0; 
+      ctx.globalAlpha = 1.0;
     }
   });
 
@@ -1428,54 +1470,47 @@ function draw() {
     }
   });
 
-  // --- START: Draw Detached Cosmos Petals ---
   detachedPetals.forEach(p => {
       ctx.save();
       ctx.translate(p.x + p.w / 2, p.y + p.h / 2);
       ctx.rotate(p.rotation);
-      // Draw the petal using its own image (which is the cosmos image), scaled down
       ctx.drawImage(p.img, -p.w / 2, -p.h / 2, p.w, p.h);
       ctx.restore();
   });
-  // --- END: Draw Detached Cosmos Petals ---
 
-  // Drawing logic for sentences and fireworks
-  const previousGlobalCenterAlpha = centerAlpha; // Store current alpha if fireworks modify it
+  const previousGlobalCenterAlpha = centerAlpha;
 
   if (sentenceActive && fireworks && fireworksState) {
-    // If fireworks are for an answer, and a question is already displayed, draw the question first
     if (fireworksState.roleOfNewSentence === 'answer' && currentQuestionSentence) {
-      centerAlpha = 1.0; // Ensure question is fully visible if it's just sitting there
-      const tempAnswerSentence = currentAnswerSentence; // Temporarily hide answer if it's being formed by fireworks
+      centerAlpha = 1.0;
+      const tempAnswerSentence = currentAnswerSentence;
       const tempAnswerIndex = currentAnswerSentenceIndex;
       currentAnswerSentence = null; currentAnswerSentenceIndex = null;
 
-      drawCenterSentence(); // Draw the existing question
+      drawCenterSentence();
 
-      currentAnswerSentence = tempAnswerSentence; // Restore for fireworks logic
+      currentAnswerSentence = tempAnswerSentence;
       currentAnswerSentenceIndex = tempAnswerIndex;
     }
-    centerAlpha = previousGlobalCenterAlpha; // Restore alpha for fireworks drawing
+    centerAlpha = previousGlobalCenterAlpha;
     drawFireworks();
   } else {
-    // No fireworks, just draw any static sentences
     if (currentQuestionSentence || currentAnswerSentence) {
-      centerAlpha = 1.0; // Ensure static sentences are fully visible
+      centerAlpha = 1.0;
       drawCenterSentence();
     }
   }
 
-  // Restore alpha if it was changed for drawing static question during answer fireworks
-  if (!sentenceActive) centerAlpha = 1.0; // If nothing is happening, alpha should be full for next potential sentence
+  if (!sentenceActive) centerAlpha = 1.0;
   else if (fireworksState && fireworksState.phase === "gather") {
-      // Alpha is handled by gather phase itself
-  } else centerAlpha = previousGlobalCenterAlpha; // Otherwise, maintain current alpha (e.g. during explode/hold)
+      // Alpha handled by gather
+  } else centerAlpha = previousGlobalCenterAlpha;
 }
 
 
 function gameLoop(time) {
   if (!isGameRunning || isGamePaused) {
-      if (isGamePaused) draw(); // Keep drawing the paused screen
+      if (isGamePaused) draw();
       return;
   }
   const delta = time - lastTime;
@@ -1490,7 +1525,7 @@ document.getElementById('stopBtn').onclick = stopGame;
 
 function resetGameStateForStartStop() {
     bullets = []; enemies = []; enemyBullets = [];
-    detachedPetals = []; // <<< 코스모스 꽃잎 배열 초기화
+    detachedPetals = [];
     fireworks = null; fireworksState = null;
     currentQuestionSentence = null; currentAnswerSentence = null;
     currentQuestionSentenceIndex = null; currentAnswerSentenceIndex = null;
@@ -1505,9 +1540,8 @@ function resetGameStateForStartStop() {
 }
 
 function startGame() {
-  calculateTopOffset(); // Ensure topOffset is correct before starting
+  calculateTopOffset();
   if (!allAssetsReady) {
-    // Consider a more user-friendly way to inform the user, e.g., a loading message on canvas
     alert("이미지 및 비디오 로딩 중입니다. 잠시 후 다시 시도하세요.");
     return;
   }
@@ -1515,81 +1549,57 @@ function startGame() {
   isGamePaused = false;
   document.getElementById('pauseBtn').textContent = 'PAUSE';
 
-  // BGM setup and play
   if (bgmAudio) {
-    bgmAudio.pause(); // Stop any previous instance
+    bgmAudio.pause();
   }
-  // bgmIndex = 0; // Or manage BGM selection differently if multiple tracks
   bgmAudio = new Audio(bgmFiles[bgmIndex]);
-  bgmAudio.volume = isMuted ? 0 : 0.021; 
+  bgmAudio.volume = isMuted ? 0 : 0.021;
   bgmAudio.loop = true;
-
-  console.log('Attempting to play BGM. Source:', bgmAudio.src, 'Volume:', bgmAudio.volume, 'Loop:', bgmAudio.loop, 'Muted:', isMuted);
-  if (navigator.userActivation) {
-    console.log('navigator.userActivation.hasBeenActive:', navigator.userActivation.hasBeenActive);
-  } else {
-    console.log('navigator.userActivation API not available.');
-  }
 
   const playPromise = bgmAudio.play();
   if (playPromise !== undefined) {
-    playPromise.then(_ => {
-      console.log('BGM playback started successfully or is already playing.');
-    }).catch(error => {
+    playPromise.catch(error => {
       console.error('BGM play error on start:', error);
-      // Inform user if BGM fails, e.g., due to browser autoplay policies
-      // alert("배경음악 자동 재생에 실패했습니다. 페이지를 클릭하거나 브라우저 설정을 확인해주세요.");
     });
-  } else {
-     console.log('bgmAudio.play() did not return a promise. Playback might be handled differently or failed silently.');
   }
 
-  // Coffee steam video play
   if (coffeeSteamVideo && coffeeVideoAssetReady) {
-    coffeeSteamVideo.currentTime = 0; // Restart video
+    coffeeSteamVideo.currentTime = 0;
     const coffeePlayPromise = coffeeSteamVideo.play();
     if (coffeePlayPromise !== undefined) {
       coffeePlayPromise.catch(error => console.error("Error playing coffee steam video:", error));
     }
   }
 
-  resetGameStateForStartStop(); // Reset all game elements
+  resetGameStateForStartStop();
   let storedIndex = Number(localStorage.getItem('sentenceIndex') || 0);
-  sentenceIndex = storedIndex % sentences.length; // Ensure index is valid
+  sentenceIndex = storedIndex % sentences.length;
   localStorage.setItem('sentenceIndex', sentenceIndex.toString());
 
-  spawnEnemy(); spawnEnemy(); // Initial enemies
+  spawnEnemy(); spawnEnemy();
 
-  // Player positioning
   player.x = canvas.width / 2 - PLAYER_SIZE / 2;
-  player.y = topOffset + (canvas.height - topOffset) - PLAYER_SIZE - 10; // Position at bottom, above controls
-  player.y = Math.max(topOffset, player.y); // Ensure player is not above topOffset
+  player.y = topOffset + (canvas.height - topOffset) - PLAYER_SIZE - 10;
+  player.y = Math.max(topOffset, player.y);
 
-  lastTime = performance.now(); // Set time for game loop delta calculation
+  lastTime = performance.now();
 
-  // Pre-warm voices
-  getVoicesReliably().then(loadedVoices => {
-      if (!loadedVoices || loadedVoices.length === 0) {
-        console.warn("startGame: Voices NOT available or list empty after pre-warm attempt.");
-      } else {
-        // console.log("startGame: Voices pre-warmed.", loadedVoices.length, "voices available.");
-      }
-  }).catch(err => console.error("startGame: Error during voice pre-warming:", err));
+  getVoicesReliably().catch(err => console.error("startGame: Error during voice pre-warming:", err));
 
-  requestAnimationFrame(gameLoop); // Start the game loop
+  requestAnimationFrame(gameLoop);
 }
 
 
 function togglePause() {
-  if (!isGameRunning) return; // Can't pause if not running
+  if (!isGameRunning) return;
   isGamePaused = !isGamePaused;
   const pauseButton = document.getElementById('pauseBtn');
   if (isGamePaused) {
     pauseButton.textContent = 'RESUME';
     if (bgmAudio && !bgmAudio.paused) bgmAudio.pause();
     if (coffeeSteamVideo && !coffeeSteamVideo.paused) coffeeSteamVideo.pause();
-    window.speechSynthesis.cancel(); // Stop any TTS
-    if (currentSentenceAudio) currentSentenceAudio.pause(); // Pause sentence mp3
+    window.speechSynthesis.cancel();
+    if (currentSentenceAudio) currentSentenceAudio.pause();
   } else {
     pauseButton.textContent = 'PAUSE';
     if (bgmAudio && bgmAudio.paused && !isMuted) {
@@ -1599,162 +1609,149 @@ function togglePause() {
         coffeeSteamVideo.play().catch(error => console.error("Error resuming coffee steam video:", error));
     }
     if (currentSentenceAudio && currentSentenceAudio.paused) {
-        currentSentenceAudio.volume = 0.8; // Ensure volume is set on resume
+        currentSentenceAudio.volume = 0.8;
         currentSentenceAudio.play().catch(e => console.error("Sentence audio resume error:", e));
     }
-    lastTime = performance.now(); // Reset lastTime to prevent large delta jump
-    requestAnimationFrame(gameLoop); // Resume game loop
+    lastTime = performance.now();
+    requestAnimationFrame(gameLoop);
   }
 }
 
 function stopGame() {
   isGameRunning = false; isGamePaused = false;
-  document.getElementById('pauseBtn').textContent = 'PAUSE'; // Reset pause button text
+  document.getElementById('pauseBtn').textContent = 'PAUSE';
   if (bgmAudio) bgmAudio.pause();
   if (coffeeSteamVideo && !coffeeSteamVideo.paused) coffeeSteamVideo.pause();
-  window.speechSynthesis.cancel(); // Stop any TTS
-  if (currentSentenceAudio) { // Stop and reset sentence mp3
+  window.speechSynthesis.cancel();
+  if (currentSentenceAudio) {
       currentSentenceAudio.pause(); currentSentenceAudio.currentTime = 0; currentSentenceAudio = null;
   }
-  resetGameStateForStartStop(); // Reset all game elements
-  ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+  resetGameStateForStartStop();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-const expandedMargin = 10; // Increased touch/click area for buttons
+const expandedMargin = 10;
 
 function handleCanvasInteraction(clientX, clientY, event) {
-  if (!isGameRunning || isGamePaused) return; // Interactions only if game is active
+  if (!isGameRunning || isGamePaused) return;
 
-  if (!isActionLocked) { // Prevent rapid multi-triggering
-    // Check for play button (question) touch/click
+  if (!isActionLocked) {
     const isPlayBtnQuestionTouched = showPlayButtonQuestion && playButtonRectQuestion &&
       clientX >= (playButtonRectQuestion.x - expandedMargin) && clientX <= (playButtonRectQuestion.x + playButtonRectQuestion.w + expandedMargin) &&
       clientY >= (playButtonRectQuestion.y - expandedMargin) && clientY <= (playButtonRectQuestion.y + playButtonRectQuestion.h + expandedMargin);
 
-    // Check for play button (answer) touch/click
     const isPlayBtnAnswerTouched = showPlayButton && playButtonRect &&
       clientX >= (playButtonRect.x - expandedMargin) && clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
       clientY >= (playButtonRect.y - expandedMargin) && clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin);
 
     if (isPlayBtnQuestionTouched) {
-      showTranslationForQuestion = true; showTranslationForAnswer = false; // Show Q translation
-      if (activeWordTranslation) activeWordTranslation.show = false; // Hide word translation
+      showTranslationForQuestion = true; showTranslationForAnswer = false;
+      if (activeWordTranslation) activeWordTranslation.show = false;
       if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
       activeWordTranslation = null; isActionLocked = true;
       if (currentQuestionSentenceIndex !== null) {
-          window.speechSynthesis.cancel(); // Stop any other TTS
-          playSentenceAudio(currentQuestionSentenceIndex) // Play question audio
+          window.speechSynthesis.cancel();
+          playSentenceAudio(currentQuestionSentenceIndex)
               .catch(err => console.error("Error playing question sentence audio from play button:", err));
       }
       event.preventDefault(); setTimeout(() => { isActionLocked = false; }, 200); return;
     }
 
     if (isPlayBtnAnswerTouched) {
-      showTranslationForAnswer = true; showTranslationForQuestion = false; // Show A translation
-      if (activeWordTranslation) activeWordTranslation.show = false; // Hide word translation
+      showTranslationForAnswer = true; showTranslationForQuestion = false;
+      if (activeWordTranslation) activeWordTranslation.show = false;
       if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
       activeWordTranslation = null; isActionLocked = true;
       if (currentAnswerSentenceIndex !== null) {
-          window.speechSynthesis.cancel(); // Stop any other TTS
-          playSentenceAudio(currentAnswerSentenceIndex) // Play answer audio
+          window.speechSynthesis.cancel();
+          playSentenceAudio(currentAnswerSentenceIndex)
               .catch(err => console.error("Error playing answer sentence audio from play button:", err));
       }
       event.preventDefault(); setTimeout(() => { isActionLocked = false; }, 200); return;
     }
 
-    // Check for word touch/click in sentences
     if ((currentQuestionSentence || currentAnswerSentence) && centerSentenceWordRects.length > 0) {
         for (const wordRect of centerSentenceWordRects) {
-          // Check if click/touch is within the word's bounding box
           if (clientX >= wordRect.x && clientX <= wordRect.x + wordRect.w &&
               clientY >= wordRect.y - wordRect.h / 2 && clientY <= wordRect.y + wordRect.h / 2 ) {
-            window.speechSynthesis.cancel(); // Stop other TTS
-            speakWord(wordRect.word).catch(err => console.error(`Error speaking word "${wordRect.word}":`, err)); // Speak word
+            window.speechSynthesis.cancel();
+            speakWord(wordRect.word).catch(err => console.error(`Error speaking word "${wordRect.word}":`, err));
 
-            if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId); // Clear previous timer
-            if (activeWordTranslation) activeWordTranslation.show = false; // Hide previous translation
+            if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
+            if (activeWordTranslation) activeWordTranslation.show = false;
             activeWordTranslation = null; isActionLocked = true;
 
-            getWordTranslation(wordRect.word).then(translation => { // Get and show new translation
+            getWordTranslation(wordRect.word).then(translation => {
                 activeWordTranslation = {
                     word: wordRect.word, translation: translation, x: wordRect.x, y: wordRect.y,
                     w: wordRect.w, h: wordRect.h, lineIndex: wordRect.lineIndex,
                     isQuestionWord: wordRect.isQuestionWord, show: true
                 };
-                wordTranslationTimeoutId = setTimeout(() => { // Timer to hide it
+                wordTranslationTimeoutId = setTimeout(() => {
                     if (activeWordTranslation && activeWordTranslation.word === wordRect.word) activeWordTranslation.show = false;
                 }, WORD_TRANSLATION_DURATION);
             }).catch(err => console.error("Error getting word translation:", err));
 
-            showTranslationForQuestion = false; showTranslationForAnswer = false; // Hide full sentence translations
+            showTranslationForQuestion = false; showTranslationForAnswer = false;
             event.preventDefault(); setTimeout(() => { isActionLocked = false; }, 300); return;
           }
         }
     }
-  } // End of isActionLocked check
+  }
 
-  // If no UI element was interacted with, it's a player action (move and shoot)
-  player.x = clientX - player.w / 2; // Center player on touch/mouse
-  if (event.type === 'touchstart' || event.type === 'touchmove') player.y = clientY - player.h / 2 - PLAYER_TOUCH_Y_OFFSET; // Adjust Y for touch
+  player.x = clientX - player.w / 2;
+  if (event.type === 'touchstart' || event.type === 'touchmove') player.y = clientY - player.h / 2 - PLAYER_TOUCH_Y_OFFSET;
   else player.y = clientY - player.h / 2;
 
-  // Keep player within canvas bounds (respecting topOffset)
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
   player.y = Math.max(topOffset, Math.min(canvas.height - player.h, player.y));
 
-  // If a word translation was showing, hide it when player moves/shoots
   if (activeWordTranslation && activeWordTranslation.show) {
     activeWordTranslation.show = false;
     if (wordTranslationTimeoutId) { clearTimeout(wordTranslationTimeoutId); wordTranslationTimeoutId = null; }
   }
-  // Hide full sentence translations too
   showTranslationForQuestion = false; showTranslationForAnswer = false;
 
-  // Create and shoot a bubble
   const size = MIN_BUBBLE_SIZE + Math.random() * (MAX_BUBBLE_SIZE - MIN_BUBBLE_SIZE);
-  const spawnX = player.x + player.w / 2 - size / 2; 
+  const spawnX = player.x + player.w / 2 - size / 2;
 
   bullets.push({
     x: spawnX,
-    y: player.y, 
+    y: player.y,
     w: size,
     h: size,
     img: bulletImg,
-    timeAlive: 0, 
+    timeAlive: 0,
     velocityY: BUBBLE_BASE_SPEED_Y_PPS + (Math.random() - 0.5) * 2 * BUBBLE_SPEED_Y_VARIATION_PPS,
-    baseX: spawnX, 
+    baseX: spawnX,
     swayFrequency: BUBBLE_SWAY_FREQUENCY_MIN + Math.random() * (BUBBLE_SWAY_FREQUENCY_MAX - BUBBLE_SWAY_FREQUENCY_MIN),
     swayAmplitude: size * (BUBBLE_SWAY_AMPLITUDE_FACTOR_MIN + Math.random() * (BUBBLE_SWAY_AMPLITUDE_FACTOR_MAX - BUBBLE_SWAY_AMPLITUDE_FACTOR_MIN)),
-    swayPhaseOffset: Math.random() * Math.PI * 2, 
+    swayPhaseOffset: Math.random() * Math.PI * 2,
     driftXPerSecond: (Math.random() - 0.5) * 2 * BUBBLE_HORIZONTAL_DRIFT_PPS_MAX,
   });
   sounds.shoot.play();
-  event.preventDefault(); // Prevent default actions like scrolling on touch
+  event.preventDefault();
 }
 
-// Touch Listeners
 canvas.addEventListener('touchstart', e => {
-  const touch = e.touches[0]; // Get first touch point
+  const touch = e.touches[0];
   handleCanvasInteraction(touch.clientX, touch.clientY, e);
-}, { passive: false }); // passive:false to allow preventDefault
+}, { passive: false });
 
-// Mouse Listener (for desktop)
 canvas.addEventListener('mousedown', e => {
   handleCanvasInteraction(e.clientX, e.clientY, e);
 });
 
-// Touch Move Listener
 canvas.addEventListener('touchmove', e => {
   if (!isGameRunning || isGamePaused) return;
   const touch = e.touches[0];
 
-  // Check if touch is over UI elements; if so, don't move player
   const isOverPlayBtnQ = showPlayButtonQuestion && playButtonRectQuestion &&
     touch.clientX >= (playButtonRectQuestion.x - expandedMargin) && touch.clientX <= (playButtonRectQuestion.x + playButtonRectQuestion.w + expandedMargin) &&
     touch.clientY >= (playButtonRectQuestion.y - expandedMargin) && touch.clientY <= (playButtonRectQuestion.y + playButtonRectQuestion.h + expandedMargin);
   const isOverPlayBtnA = showPlayButton && playButtonRect &&
     touch.clientX >= (playButtonRect.x - expandedMargin) && touch.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
-    touch.clientY >= (playButtonRect.y - expandedMargin) && touch.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin);
+    touch.clientY >= (playButtonRect.y - expandedMargin) && clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin);
   let isOverWord = false;
   if ((currentQuestionSentence || currentAnswerSentence) && centerSentenceWordRects.length > 0) {
     for (const wordRect of centerSentenceWordRects) {
@@ -1764,21 +1761,18 @@ canvas.addEventListener('touchmove', e => {
       }
     }
   }
-  if (isOverPlayBtnQ || isOverPlayBtnA || isOverWord) { event.preventDefault(); return; } // Prevent player move if over UI
+  if (isOverPlayBtnQ || isOverPlayBtnA || isOverWord) { e.preventDefault(); return; }
 
-  // Move player
   player.x = touch.clientX - player.w / 2;
-  player.y = touch.clientY - player.h / 2 - PLAYER_TOUCH_Y_OFFSET; // Touch Y offset
+  player.y = touch.clientY - player.h / 2 - PLAYER_TOUCH_Y_OFFSET;
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
   player.y = Math.max(topOffset, Math.min(canvas.height - player.h, player.y));
-  e.preventDefault(); // Prevent scrolling
+  e.preventDefault();
 }, { passive: false });
 
-// Mouse Move Listener (for desktop)
 canvas.addEventListener('mousemove', e => {
   if (!isGameRunning || isGamePaused) return;
 
-  // Check if mouse is over UI elements; if so, don't move player
   const isOverPlayBtnQ = showPlayButtonQuestion && playButtonRectQuestion &&
       e.clientX >= (playButtonRectQuestion.x - expandedMargin) && e.clientX <= (playButtonRectQuestion.x + playButtonRectQuestion.w + expandedMargin) &&
       e.clientY >= (playButtonRectQuestion.y - expandedMargin) && e.clientY <= (playButtonRectQuestion.y + playButtonRectQuestion.h + expandedMargin);
@@ -1794,25 +1788,21 @@ canvas.addEventListener('mousemove', e => {
       }
     }
   }
-  if (isOverPlayBtnQ || isOverPlayBtnA || isOverWord) return; // Don't move player if over UI
+  if (isOverPlayBtnQ || isOverPlayBtnA || isOverWord) return;
 
-  // Move player
   player.x = e.clientX - player.w / 2;
   player.y = e.clientY - player.h / 2;
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
   player.y = Math.max(topOffset, Math.min(canvas.height - player.h, player.y));
 });
 
-// Initial setup on window load
 window.addEventListener('load', () => {
-    calculateTopOffset(); // Calculate offset once elements are loaded
+    calculateTopOffset();
     let storedIndex = Number(localStorage.getItem('sentenceIndex') || 0);
     sentenceIndex = storedIndex % sentences.length;
     localStorage.setItem('sentenceIndex', sentenceIndex.toString());
 
     if (bgmFiles.length > 0) {
         console.log("BGM object initialized on load. Path: " + bgmAudio.src);
-        // Note: Autoplay of BGM might be blocked by browser policies until user interaction.
-        // startGame() handles the actual play attempt.
     }
 });

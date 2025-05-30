@@ -251,11 +251,11 @@ const enemyImgs = [
 const bulletImg = new Image();
 bulletImg.src = 'images/bubble_bullet.png';
 
-// --- START: 배경 이미지 로드 ---
-const backgroundImage = new Image();
-backgroundImage.src = 'images/new_background.jpg'; // 교체할 배경 이미지 경로
-let isBackgroundImageLoaded = false;
-// --- END: 배경 이미지 로드 ---
+// --- START: 배경 이미지 로드 관련 변수 제거 ---
+// const backgroundImage = new Image(); // 제거
+// backgroundImage.src = 'images/new_background.jpg'; // 제거
+// let isBackgroundImageLoaded = false; // 제거
+// --- END: 배경 이미지 로드 관련 변수 제거 ---
 
 
 const bgmFiles = [
@@ -341,7 +341,9 @@ setInterval(() => {
 
 // Asset 로딩 관리
 let allAssetsReady = false;
-let assetsToLoad = 1 + enemyImgs.length + 1 + 1; // player, enemies, bullet, background
+// --- MODIFICATION: 배경 이미지 로드 개수 제거 ---
+let assetsToLoad = 1 + enemyImgs.length + 1; // player, enemies, bullet (배경 이미지 카운트 제거)
+// --- END MODIFICATION ---
 let loadedAssetCount = 0;
 let coffeeVideoAssetReady = false;
 
@@ -366,10 +368,12 @@ function coffeeVideoError() {
 }
 
 function checkAllAssetsReady() {
-  if (loadedAssetCount >= assetsToLoad && coffeeVideoAssetReady && isBackgroundImageLoaded) {
+  // --- MODIFICATION: isBackgroundImageLoaded 조건 제거 ---
+  if (loadedAssetCount >= assetsToLoad && coffeeVideoAssetReady) {
     allAssetsReady = true;
-    console.log("All game assets (images, video, and background) are ready.");
+    console.log("All game assets (images and video) are ready.");
   }
+  // --- END MODIFICATION ---
 }
 
 playerImg.onload = assetLoaded;
@@ -383,19 +387,10 @@ enemyImgs.forEach(img => {
 bulletImg.onload = assetLoaded;
 bulletImg.onerror = () => { console.error("Failed to load bullet image."); assetLoaded(); };
 
-backgroundImage.onload = () => {
-    isBackgroundImageLoaded = true;
-    console.log("Background image loaded successfully (counted).");
-    assetLoaded(); // Count background image as a loaded asset
-    if (isGameRunning && !isGamePaused) { // If game already started, redraw
-        draw();
-    }
-};
-backgroundImage.onerror = () => {
-    console.error("Failed to load background image. Check path and filename: " + backgroundImage.src);
-    isBackgroundImageLoaded = false; // Explicitly set to false on error
-    assetLoaded(); // Still count it as an "attempted" asset load to not hang indefinitely
-};
+// --- MODIFICATION: 배경 이미지 로드 핸들러 제거 ---
+// backgroundImage.onload = () => { ... }; // 제거
+// backgroundImage.onerror = () => { ... }; // 제거
+// --- END MODIFICATION ---
 
 
 if (coffeeSteamVideo) {
@@ -1421,15 +1416,10 @@ function update(delta) {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // --- START: 배경 이미지 그리기 ---
-  if (isBackgroundImageLoaded) {
-    ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-  } else {
-    // 이미지가 로드되지 않았을 경우 기본 검은색 배경
-    ctx.fillStyle = 'black';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
-  // --- END: 배경 이미지 그리기 ---
+  // --- START: 배경 그리기 (검은색) ---
+  ctx.fillStyle = 'black';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // --- END: 배경 그리기 ---
 
 
   ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
@@ -1452,14 +1442,12 @@ function draw() {
       const steamOffsetX = (e.w - steamWidth) / 2;
       const steamOffsetY = -steamHeight * 0.85;
 
-      // --- START: 커피 김 효과에 globalCompositeOperation 적용 ---
-      const prevCompositeOperation = ctx.globalCompositeOperation; // 현재 값 저장
-      ctx.globalCompositeOperation = 'lighter'; // 비디오의 어두운 배경을 밝게 혼합 시도
+      const prevCompositeOperation = ctx.globalCompositeOperation;
+      ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = 0.65;
       ctx.drawImage(coffeeSteamVideo, e.x + steamOffsetX, e.y + steamOffsetY, steamWidth, steamHeight);
-      ctx.globalAlpha = 1.0; // globalAlpha 초기화
-      ctx.globalCompositeOperation = prevCompositeOperation; // 원래 값으로 복원
-      // --- END: 커피 김 효과에 globalCompositeOperation 적용 ---
+      ctx.globalAlpha = 1.0;
+      ctx.globalCompositeOperation = prevCompositeOperation;
     }
   });
 

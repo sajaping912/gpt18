@@ -1167,7 +1167,7 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
 function drawPlayButton(buttonRect, baseScaleForOriginalSize) {
     if (!buttonRect) return;
 
-    const visualShrinkFactor = 0.8;
+    const visualShrinkFactor = 0.72;
     const visualWidth = buttonRect.w * visualShrinkFactor;
     const visualHeight = buttonRect.h * visualShrinkFactor;
     const visualX = buttonRect.x + (buttonRect.w - visualWidth) / 2;

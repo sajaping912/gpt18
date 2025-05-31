@@ -516,6 +516,37 @@ function isQuestion(sentenceText) {
   return sentenceText.trim().endsWith('?');
 }
 
+// --- START: New isPastParticiple function ---
+function isPastParticiple(word) {
+    const lowerWord = word.toLowerCase().replace(/[^a-z]/g, ''); // Keep only letters
+    if (!lowerWord) return false;
+
+    const irregularPPs = [
+        "been", "begun", "broken", "brought", "built", "bought", "caught", "chosen", "come", "cost",
+        "cut", "done", "drawn", "dreamt", "dreamed", "drunk", "driven", "eaten", "fallen", "felt",
+        "fought", "found", "flown", "forgotten", "forgiven", "frozen", "got", "gotten", "given",
+        "gone", "grown", "hung", "had", "heard", "hidden", "hit", "held", "hurt", "kept",
+        "known", "laid", "led", "left", "lent", "let", "lain", "lit", "lost", "made",
+        "meant", "met", "paid", "put", "quit", "read", "ridden", "rung", "risen", "run",
+        "said", "seen", "sold", "sent", "set", "shaken", "shone", "shot", "shown", "shut",
+        "sung", "sunk", "sat", "slept", "spoken", "spent", "spread", "stood", "stolen",
+        "stuck", "sworn", "swept", "swum", "taken", "taught", "torn", "told", "thought",
+        "thrown", "understood", "woken", "worn", "won", "written"
+    ];
+
+    if (irregularPPs.includes(lowerWord)) {
+        return true;
+    }
+
+    if (lowerWord.length > 2 && lowerWord.endsWith("ed")) {
+        const nonVerbEdEndings = ["bed", "red", "shed", "wed"];
+        if (nonVerbEdEndings.includes(lowerWord)) return false;
+        return true;
+    }
+    return false;
+}
+// --- END: New isPastParticiple function ---
+
 async function getWordTranslation(word, targetLang = 'ko') {
   const cleanedWord = word.replace(/[^a-zA-Z0-9]/g, "").toLowerCase().trim();
   if (!cleanedWord) return "Error: Invalid word";
@@ -942,45 +973,6 @@ async function speakWord(word) {
 const englishFont = "21.168px Arial";
 const translationFont = "17.0px Arial";
 
-
-// --- START: New isPastParticiple function ---
-function isPastParticiple(word) {
-    const lowerWord = word.toLowerCase().replace(/[^a-z]/g, ''); // Keep only letters
-    if (!lowerWord) return false;
-
-    const irregularPPs = [
-        "been", "begun", "broken", "brought", "built", "bought", "caught", "chosen", "come", "cost",
-        "cut", "done", "drawn", "dreamt", "dreamed", "drunk", "driven", "eaten", "fallen", "felt",
-        "fought", "found", "flown", "forgotten", "forgiven", "frozen", "got", "gotten", "given",
-        "gone", "grown", "hung", "had", "heard", "hidden", "hit", "held", "hurt", "kept",
-        "known", "laid", "led", "left", "lent", "let", "lain", "lit", "lost", "made",
-        "meant", "met", "paid", "put", "quit", "read", "ridden", "rung", "risen", "run",
-        "said", "seen", "sold", "sent", "set", "shaken", "shone", "shot", "shown", "shut",
-        "sung", "sunk", "sat", "slept", "spoken", "spent", "spread", "stood", "stolen",
-        "stuck", "sworn", "swept", "swum", "taken", "taught", "torn", "told", "thought",
-        "thrown", "understood", "woken", "worn", "won", "written"
-        // Add specific past participles from the game's sentences if needed and irregular
-        // e.g., "cried" (regular but common), "rolled" (regular), "melted" (regular)
-        // "allowed", "cleaned", "crashed", "fixed", "joined", "jumped", "laughed",
-        // "opened", "practiced", "shared", "stuck", "visited", "talked", "helped"
-    ];
-
-    if (irregularPPs.includes(lowerWord)) {
-        return true;
-    }
-
-    // Check for regular past participles (ending in "ed")
-    if (lowerWord.length > 2 && lowerWord.endsWith("ed")) {
-        // Avoid common adjectives ending in 'ed' that are not typically verbs in this structure
-        const nonVerbEdEndings = ["bed", "red", "shed", "wed"]; // "led" is in irregulars
-        if (nonVerbEdEndings.includes(lowerWord)) return false;
-        // For "aux + have + X", X ending in "ed" is highly likely a PP.
-        return true;
-    }
-    return false;
-}
-// --- END: New isPastParticiple function ---
-
 // =======================================================================
 // START OF MODIFIED splitSentence FUNCTION
 // =======================================================================
@@ -994,25 +986,19 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
 
     let modalHavePpFoundAndSplit = false;
 
-    // Attempt to split based on "Modal Aux + (Subject) + have + PastParticiple"
-    // This structure should ideally be on the first line.
-    for (let i = 0; i < words.length; i++) { // Iterate through each word to find a potential modal
+    for (let i = 0; i < words.length; i++) {
         if (isAux(words[i])) {
             let modalIdx = i;
             let haveIdx = -1;
             let ppIdx = -1;
 
-            // Scenario 1: Modal + have + PP (e.g., "could have gone")
             if (modalIdx + 2 < words.length &&
                 words[modalIdx + 1].toLowerCase().replace(/'/g, "") === "have" &&
                 isPastParticiple(words[modalIdx + 2])) {
                 haveIdx = modalIdx + 1;
                 ppIdx = modalIdx + 2;
             }
-            // Scenario 2: Modal + Subject + have + PP (e.g., "could he have gone")
-            // Assuming a single-word subject for simplicity here.
             else if (modalIdx + 3 < words.length &&
-                     /* words[modalIdx + 1] is Subject */
                      words[modalIdx + 2].toLowerCase().replace(/'/g, "") === "have" &&
                      isPastParticiple(words[modalIdx + 3])) {
                 haveIdx = modalIdx + 2;
@@ -1020,47 +1006,43 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
             }
 
             if (ppIdx !== -1) {
-                // Found the "Modal ... have PP" structure.
-                // The first line should go up to this PP.
-                let endIndexForLine1 = ppIdx + 1; // Slice up to, but not including, the word *after* PP
-
+                let endIndexForLine1 = ppIdx + 1;
                 line1Words = words.slice(0, endIndexForLine1);
                 line2Words = words.slice(endIndexForLine1);
                 modalHavePpFoundAndSplit = true;
-                break; // Prioritize the first complete "modal (+ subj) + have + pp"
+                break;
             }
         }
     }
 
     if (!modalHavePpFoundAndSplit) {
-        // Fallback to original splitting logic if the specific "modal + have + pp" rule wasn't applied
         const isEffectiveQuestionType = (isCurrentlyQuestion !== null) ? isCurrentlyQuestion : originalSentenceForShortCheck.endsWith('?');
-        let wordsConsumed = 0; // For questions
-        let wordsConsumedForLine1 = 0; // For answers
+        let wordsConsumed = 0;
+        let wordsConsumedForLine1 = 0;
 
-        if (isEffectiveQuestionType) { // Question splitting logic
+        if (isEffectiveQuestionType) {
             if (words.length > 0) {
                 if (isWh(words[0])) {
                     line1Words.push(words[0]); wordsConsumed = 1;
                     if (wordsConsumed < words.length && isAux(words[wordsConsumed])) {
                         line1Words.push(words[wordsConsumed++]);
-                        if (wordsConsumed < words.length) { // Potential Subject
+                        if (wordsConsumed < words.length) {
                             line1Words.push(words[wordsConsumed++]);
                             if (wordsConsumed < words.length && isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed])) {
                                 line1Words.push(words[wordsConsumed++]);
                             }
                         }
-                    } else if (wordsConsumed < words.length && (isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed]))) { // Wh (as Subj) + Verb
+                    } else if (wordsConsumed < words.length && (isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed]))) {
                         line1Words.push(words[wordsConsumed++]);
-                    } else if (wordsConsumed < words.length) { // Wh + Something else
+                    } else if (wordsConsumed < words.length) {
                         line1Words.push(words[wordsConsumed++]);
                         if (wordsConsumed < words.length && (isAux(words[wordsConsumed]) || (isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed])) ) ) {
                             if (line1Words.length < 4) { line1Words.push(words[wordsConsumed++]); }
                         }
                     }
-                } else if (isAux(words[0])) { // Starts with Auxiliary
+                } else if (isAux(words[0])) {
                     line1Words.push(words[0]); wordsConsumed = 1;
-                    if (wordsConsumed < words.length) { // Potential Subject
+                    if (wordsConsumed < words.length) {
                         line1Words.push(words[wordsConsumed++]);
                         if (wordsConsumed < words.length && isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed])) {
                             line1Words.push(words[wordsConsumed++]);
@@ -1068,7 +1050,6 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
                     }
                 }
             }
-            // Fallback for questions if line1Words is still empty
             if (line1Words.length === 0 && words.length > 0) {
                 let splitIdx = (words.length <= 3) ? words.length : Math.min(2, words.length);
                 if (words.length === 4) splitIdx = 2;
@@ -1077,14 +1058,14 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
                 wordsConsumed = line1Words.length;
             }
             line2Words = words.slice(wordsConsumed);
-        } else { // Answer splitting logic
+        } else {
             let subjectEndIdx = -1;
             for (let k = 0; k < words.length; k++) {
                 if (isAux(words[k]) || (isVerb(words[k]) && !isAux(words[k])) || isVing(words[k]) || isBeen(words[k])) {
                     subjectEndIdx = k; break;
                 }
             }
-            if (subjectEndIdx > 0) { // Subject + Verb/Aux
+            if (subjectEndIdx > 0) {
                 for (let k = 0; k < subjectEndIdx; k++) line1Words.push(words[k]);
                 wordsConsumedForLine1 = subjectEndIdx;
                 if (wordsConsumedForLine1 < words.length && isAux(words[wordsConsumedForLine1])) {
@@ -1105,7 +1086,7 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
                     line1Words.push(words[wordsConsumedForLine1++]);
                 }
                 line2Words = words.slice(wordsConsumedForLine1);
-            } else if (subjectEndIdx === 0 && words.length > 0) { // Starts with Aux/Verb
+            } else if (subjectEndIdx === 0 && words.length > 0) {
                 line1Words.push(words[0]); wordsConsumedForLine1 = 1;
                 let verbAddedToLine1 = (isVerb(words[0]) && !isAux(words[0])) || isVing(words[0]) || isBeen(words[0]);
                 if (wordsConsumedForLine1 < words.length && isAux(words[0]) && (isVerb(words[wordsConsumedForLine1]) || isVing(words[wordsConsumedForLine1]) || isBeen(words[wordsConsumedForLine1])) && !isAux(words[wordsConsumedForLine1])) {
@@ -1115,7 +1096,7 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
                     line1Words.push(words[wordsConsumedForLine1++]);
                 }
                 line2Words = words.slice(wordsConsumedForLine1);
-            } else { // Fallback for answers (e.g., all nouns, or no clear verb/aux start)
+            } else {
                 const half = Math.max(1, Math.ceil(words.length / 2));
                 line1Words = words.slice(0, half);
                 line2Words = words.slice(half);
@@ -1123,16 +1104,12 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
         }
     }
 
-    // Override for very short sentences to be on one line,
-    // but only if modalHavePpFoundAndSplit didn't already result in line2Words being empty.
     if (words.length <= 4 && originalSentenceForShortCheck.length < 35) {
         if (!(modalHavePpFoundAndSplit && line2Words.length === 0)) {
             line1Words = words.slice();
             line2Words = [];
         }
     }
-    // Final check: if line1 is empty but there are words, put at least the first word on line1.
-    // This can happen if modalHavePp logic fails or original logic results in empty line1 for some reason.
     if (line1Words.length === 0 && words.length > 0) {
         line1Words = [words[0]];
         line2Words = words.slice(1);
@@ -1185,7 +1162,7 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
             }
         }
 
-        const words = lineText.split(" ");
+        const words = lineText.split(" "); // Get words for the current line being processed
         let wordMetrics = words.map(w => ctx.measureText(w));
         const originalSpaceWidth = ctx.measureText(" ").width;
         const adjustedSpaceWidth = originalSpaceWidth * 1.20;
@@ -1199,20 +1176,41 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
 
         for (let j = 0; j < words.length; j++) {
             let rawWord = words[j];
-            let cleanedWordForColor = rawWord.replace(/[^a-zA-Z0-9]/g, "");
-            let lowerCleanedWordForColor = cleanedWordForColor.toLowerCase();
-            let color = "#fff";
+            let lowerCleanedWordForColor = rawWord.toLowerCase().replace(/[^a-z0-9']/g, "");
+            
+            // --- START: Modified Color Logic ---
+            let color = "#fff"; // Default white
 
-            if (isCurrentBlockContentQuestionType && i === 0 && j === 0 && (isAux(lowerCleanedWordForColor) || isWh(lowerCleanedWordForColor))) {
-                color = "#40b8ff";
-            } else if (isVerb(lowerCleanedWordForColor) && !blockContext.verbColored && !isAux(lowerCleanedWordForColor) ) {
-                color = "#FFD600";
-                blockContext.verbColored = true;
-            } else if (isAux(lowerCleanedWordForColor) || isBeen(lowerCleanedWordForColor)) {
-                color = "#40b8ff";
-            } else if (isVing(lowerCleanedWordForColor)) {
-                color = "#40b8ff";
+            // 1. Wh-words at the start of a question line 1 are green.
+            if (isCurrentBlockContentQuestionType && i === 0 && j === 0 && isWh(lowerCleanedWordForColor)) {
+                color = '#90EE90'; // Light Green for Wh-words
             }
+            // 2. Auxiliaries (including at start of Q line 1 if not Wh), 'been', 'ving' are blue.
+            else if (isAux(lowerCleanedWordForColor) || isBeen(lowerCleanedWordForColor) || isVing(lowerCleanedWordForColor)) {
+                color = "#40b8ff"; // Blue
+            }
+            // 3. First main verb is yellow.
+            else if (isVerb(lowerCleanedWordForColor) && !blockContext.verbColored && !isAux(lowerCleanedWordForColor)) {
+                color = "#FFD600"; // Yellow
+                blockContext.verbColored = true;
+            }
+
+            // 4. After the above, if it's a question's first line and the word is a subject following an Aux, color it blue.
+            // This targets words that remained white.
+            if (color === "#fff" && isCurrentBlockContentQuestionType && i === 0) {
+                // Case: Aux + Subject (current word j=1 is Subject)
+                // words[0] refers to the first word of the current line being processed.
+                if (j === 1 && words.length > 1 && isAux(words[0].toLowerCase().replace(/[^a-z0-9']/g, ''))) {
+                    color = "#40b8ff"; // Blue (same as auxiliary)
+                }
+                // Case: Wh-word (green) + Aux (blue) + Subject (current word j=2 is Subject)
+                else if (j === 2 && words.length > 2 &&
+                         isWh(words[0].toLowerCase().replace(/[^a-z0-9']/g, '')) &&
+                         isAux(words[1].toLowerCase().replace(/[^a-z0-9']/g, ''))) {
+                    color = "#40b8ff"; // Blue (same as auxiliary)
+                }
+            }
+            // --- END: Modified Color Logic ---
 
             ctx.fillStyle = color;
             ctx.fillText(rawWord, currentX, currentLineCenterY);
@@ -2037,7 +2035,7 @@ canvas.addEventListener('touchmove', e => {
     touch.clientY >= (playButtonRectQuestion.y - expandedMargin) && touch.clientY <= (playButtonRectQuestion.y + playButtonRectQuestion.h + expandedMargin);
   const isOverPlayBtnA = showPlayButton && playButtonRect &&
     touch.clientX >= (playButtonRect.x - expandedMargin) && touch.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
-    touch.clientY >= (playButtonRect.y - expandedMargin) && touch.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin);
+    touch.clientY >= (playButtonRect.y - expandedMargin) && clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin);
   let isOverWord = false;
   if ((currentQuestionSentence || currentAnswerSentence) && centerSentenceWordRects.length > 0) {
     for (const wordRect of centerSentenceWordRects) {

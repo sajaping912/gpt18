@@ -973,9 +973,9 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
                 } else if (wordsConsumed < words.length && (isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed]))) { // Wh (as Subj) + Verb
                     line1Words.push(words[wordsConsumed++]); // Verb
                 } else if (wordsConsumed < words.length) { // Wh + Something else
-                    line1Words.push(words[wordsConsumed++]); 
+                    line1Words.push(words[wordsConsumed++]);
                     if (wordsConsumed < words.length && (isAux(words[wordsConsumed]) || (isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed])) ) ) {
-                        if (line1Words.length < 4) { 
+                        if (line1Words.length < 4) {
                            line1Words.push(words[wordsConsumed++]);
                         }
                     }
@@ -992,11 +992,11 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
             }
         }
 
-        if (line1Words.length === 0 && words.length > 0) { 
-            let splitIdx = (words.length <= 3) ? words.length : Math.min(2, words.length); 
-            if (words.length === 4 ) splitIdx = 2; 
-            else if (words.length === 5) splitIdx = 3; 
-            
+        if (line1Words.length === 0 && words.length > 0) {
+            let splitIdx = (words.length <= 3) ? words.length : Math.min(2, words.length);
+            if (words.length === 4 ) splitIdx = 2;
+            else if (words.length === 5) splitIdx = 3;
+
             line1Words = words.slice(0, splitIdx);
             wordsConsumed = line1Words.length;
         }
@@ -1025,7 +1025,7 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
             let verbAddedToLine1 = false;
             if (wordsConsumedForLine1 < words.length && (isVerb(words[wordsConsumedForLine1]) || isVing(words[wordsConsumedForLine1]) || isBeen(words[wordsConsumedForLine1]))) {
                 let addVerb = true;
-                if (line1Words.length > subjectEndIdx && line1Words.length > 0) { 
+                if (line1Words.length > subjectEndIdx && line1Words.length > 0) {
                     const lastWordInL1 = line1Words[line1Words.length - 1].toLowerCase().replace(/[^a-z0-9']/g, '');
                     const currentVerbCandidate = words[wordsConsumedForLine1].toLowerCase().replace(/[^a-z0-9']/g, '');
                     if (lastWordInL1 === currentVerbCandidate && isAux(words[wordsConsumedForLine1])) {
@@ -1034,9 +1034,9 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
                 }
                 if (addVerb) {
                     line1Words.push(words[wordsConsumedForLine1]);
-                    verbAddedToLine1 = true; 
+                    verbAddedToLine1 = true;
                 }
-                wordsConsumedForLine1++; 
+                wordsConsumedForLine1++;
             }
 
             // Add Object (1 word) if a verb was added AND a next word exists
@@ -1052,11 +1052,11 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
             let verbAddedToLine1 = (isVerb(words[0]) && !isAux(words[0])) || isVing(words[0]) || isBeen(words[0]);
 
             if (wordsConsumedForLine1 < words.length && isAux(words[0]) && (isVerb(words[wordsConsumedForLine1]) || isVing(words[wordsConsumedForLine1]) || isBeen(words[wordsConsumedForLine1])) && !isAux(words[wordsConsumedForLine1])) {
-                line1Words.push(words[wordsConsumedForLine1]); 
+                line1Words.push(words[wordsConsumedForLine1]);
                 verbAddedToLine1 = true;
                 wordsConsumedForLine1++;
             }
-            
+
             if (verbAddedToLine1 && wordsConsumedForLine1 < words.length && line1Words.length < 3 ) {
                  line1Words.push(words[wordsConsumedForLine1]);
                  wordsConsumedForLine1++;
@@ -1078,7 +1078,7 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
         line1Words = [words[0]];
         line2Words = words.slice(1);
     }
-    
+
     return [line1Words.join(" "), line2Words.join(" ").trim()];
 }
 // =======================================================================
@@ -1116,13 +1116,40 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
         const lineText = lines[i];
         let currentLineCenterY = yFirstLineTextCenter + i * LINE_HEIGHT;
 
+        // =======================================================================
+        // START OF USER REQUESTED LINE SPACING ADJUSTMENT
+        // =======================================================================
+        if (isQuestionBlock) {
+            if (i === 0) { // 첫 번째 문장(질문 블록)의 첫 번째 줄
+                currentLineCenterY -= 10;
+            }
+            // 질문 블록의 두 번째 줄은 첫 번째 줄이 위로 이동하고
+            // 표준 LINE_HEIGHT에 의해 자연스럽게 간격이 넓어집니다.
+            // 늘어난 간격을 만들기 위해 두 번째 줄 자체에 대한 명시적인 +10px 조정은 필요하지 않습니다.
+        } else { // 두 번째 문장(답변 블록)
+            if (i === 1) { // 답변 블록의 두 번째 줄
+                currentLineCenterY += 10;
+            }
+        }
+        // =======================================================================
+        // END OF USER REQUESTED LINE SPACING ADJUSTMENT
+        // =======================================================================
+
         const words = lineText.split(" ");
         let wordMetrics = words.map(w => ctx.measureText(w));
-        let spaceWidth = ctx.measureText(" ").width;
-        let totalLineWidth = wordMetrics.reduce((sum, m) => sum + m.width, 0) + spaceWidth * (words.length - 1);
+
+        // --- START: 단어 간 간격 20% 증가 ---
+        const originalSpaceWidth = ctx.measureText(" ").width;
+        const adjustedSpaceWidth = originalSpaceWidth * 1.20;
+        // --- END: 단어 간 간격 20% 증가 ---
+
+        // Calculate total line width using the *adjusted* space width for centering
+        let totalLineWidth = wordMetrics.reduce((sum, m) => sum + m.width, 0);
+        if (words.length > 1) {
+            totalLineWidth += adjustedSpaceWidth * (words.length - 1);
+        }
 
         let currentX = (canvas.width - totalLineWidth) / 2;
-
         const wordHeight = parseFloat(englishFont.match(/(\d*\.?\d*)px/)[1]);
 
         for (let j = 0; j < words.length; j++) {
@@ -1156,9 +1183,20 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
                 isQuestionWord: isQuestionBlock
             });
 
-            currentX += measuredWidth + spaceWidth;
+            // Use the *adjusted* space width for advancing X
+            if (j < words.length - 1) { // Only add space if it's not the last word
+                currentX += measuredWidth + adjustedSpaceWidth;
+            } else {
+                currentX += measuredWidth;
+            }
         }
         lastDrawnTextBottomY = currentLineCenterY + LINE_HEIGHT / 2;
+         if (isQuestionBlock && i === 0) {
+            lastDrawnTextBottomY -=10;
+        } else if (!isQuestionBlock && i === 1) {
+            lastDrawnTextBottomY +=10;
+        }
+
     }
     return { lastY: lastDrawnTextBottomY, wordRects: localWordRects };
 }
@@ -1231,14 +1269,19 @@ function drawCenterSentence() {
     const btnX = 10;
 
     if (currentQuestionSentence) {
-        const questionLinesForHeight = [currentQuestionSentence.line1, currentQuestionSentence.line2].filter(l => l && l.trim());
-        const questionBlockActualHeight = questionLinesForHeight.length * LINE_HEIGHT;
-        const questionFirstLineCenterY = questionBlockCenterY - questionBlockActualHeight / 2 + LINE_HEIGHT / 2;
-
         questionDrawOutput = drawSingleSentenceBlock(currentQuestionSentence, questionBlockCenterY, true, questionBlockContext);
         centerSentenceWordRects.push(...questionDrawOutput.wordRects);
 
-        playButtonRectQuestion = { x: btnX, y: questionFirstLineCenterY - btnH_forHitbox / 2, w: btnW_forHitbox, h: btnH_forHitbox };
+        let playButtonQuestionY = questionBlockCenterY - btnH_forHitbox / 2;
+        const questionLinesForHeight = [currentQuestionSentence.line1, currentQuestionSentence.line2].filter(l => l && l.trim());
+        if (questionLinesForHeight.length > 0) {
+            let actualFirstLineCenterY = questionBlockCenterY - (questionLinesForHeight.length * LINE_HEIGHT) / 2 + LINE_HEIGHT / 2;
+            if (questionLinesForHeight.length > 0) actualFirstLineCenterY -=10;
+            playButtonQuestionY = actualFirstLineCenterY - btnH_forHitbox / 2;
+        }
+
+
+        playButtonRectQuestion = { x: btnX, y: playButtonQuestionY, w: btnW_forHitbox, h: btnH_forHitbox };
         if (showPlayButtonQuestion) {
             drawPlayButton(playButtonRectQuestion, currentVisualScaleForHitbox);
         }
@@ -1266,7 +1309,9 @@ function drawCenterSentence() {
         if (currentQuestionSentence) {
             topYForAnswerBlock = questionDrawOutput.lastY + ANSWER_OFFSET_Y;
         } else {
-            topYForAnswerBlock = mainRenderAreaYCenter - (answerBlockHeight / 2);
+            let effectiveCenterY = mainRenderAreaYCenter;
+            if (answerLines.length === 2) effectiveCenterY -= 10 / 2;
+             topYForAnswerBlock = effectiveCenterY - (answerBlockHeight / 2);
         }
 
         const answerFirstLineCenterY = topYForAnswerBlock + LINE_HEIGHT / 2;
@@ -1416,12 +1461,25 @@ function startFireworks(sentenceTextForFireworks, globalSentenceIndex, explosion
         if (roleOfNewSentence === 'question') {
             const qBlockFinalCenterY = mainRenderAreaYCenter + SENTENCE_VERTICAL_ADJUSTMENT;
             wordTargetY = qBlockFinalCenterY - sentenceBlockFinalHeight_fw / 2 + (wordsForFireworks[j].row * LINE_HEIGHT) + (LINE_HEIGHT / 2);
+            if (wordsForFireworks[j].row === 0) {
+                wordTargetY -= 10;
+            }
         } else {
             const [qTextL1_layout, qTextL2_layout] = splitSentence(questionTextForLayout, true);
             const qTextLines_layout = [qTextL1_layout, qTextL2_layout].filter(l => l && l.trim());
-            const questionBlockActualHeight_layout = qTextLines_layout.length * LINE_HEIGHT;
+
+            let questionBlockActualHeight_layout = qTextLines_layout.length * LINE_HEIGHT;
+            if (qTextLines_layout.length === 2) questionBlockActualHeight_layout +=10;
+
+
             const questionBlockActualCenterY_layout = mainRenderAreaYCenter + SENTENCE_VERTICAL_ADJUSTMENT;
-            const questionBlockActualBottomY_layout = questionBlockActualCenterY_layout + questionBlockActualHeight_layout / 2;
+            let questionBlockActualBottomY_layout = questionBlockActualCenterY_layout + questionBlockActualHeight_layout / 2;
+            if (qTextLines_layout.length === 1) {
+                 questionBlockActualBottomY_layout -= 10;
+            } else if (qTextLines_layout.length === 0) {
+                 questionBlockActualBottomY_layout = questionBlockActualCenterY_layout;
+            }
+
 
             let answerBlockFinalTopY_fw;
             if (qTextLines_layout.length > 0) {
@@ -1430,6 +1488,9 @@ function startFireworks(sentenceTextForFireworks, globalSentenceIndex, explosion
                 answerBlockFinalTopY_fw = questionBlockActualCenterY_layout - sentenceBlockFinalHeight_fw / 2;
             }
             wordTargetY = answerBlockFinalTopY_fw + (wordsForFireworks[j].row * LINE_HEIGHT) + (LINE_HEIGHT / 2);
+            if (wordsForFireworks[j].row === 1) {
+                wordTargetY += 10;
+            }
         }
 
         fireworks.push({
@@ -1480,18 +1541,35 @@ function updateFireworks() {
     if(sentenceLine1Gather.trim()) sentenceLineWordArrays.push(sentenceLine1Gather.split(" "));
     if(sentenceLine2Gather.trim()) sentenceLineWordArrays.push(sentenceLine2Gather.split(" "));
 
+    // --- START: 단어 간 간격 20% 증가 적용 (불꽃놀이 효과용) ---
+    const originalSpaceWidthFireworks = tempCtx.measureText(" ").width;
+    const adjustedSpaceWidthFireworks = originalSpaceWidthFireworks * 1.20;
+    // --- END: 단어 간 간격 20% 증가 적용 (불꽃놀이 효과용) ---
+
     let wordIndexInFireworks = 0;
     for (let i = 0; i < sentenceLineWordArrays.length; i++) {
         const wordsInLine = sentenceLineWordArrays[i];
         let wordMetrics = wordsInLine.map(w => tempCtx.measureText(w));
-        let spaceWidth = tempCtx.measureText(" ").width;
-        let totalLineWidth = wordMetrics.reduce((sum, m) => sum + m.width, 0) + spaceWidth * (wordsInLine.length - 1);
-        let currentXTargetForLineStart = (canvas.width - totalLineWidth) / 2;
+
+        // Calculate total line width using the *adjusted* space width for centering
+        let currentLineTotalWidth = 0;
+        for(let k=0; k < wordMetrics.length; k++) {
+            currentLineTotalWidth += wordMetrics[k].width;
+            if (k < wordMetrics.length - 1) { // Only add space if not the last word
+                currentLineTotalWidth += adjustedSpaceWidthFireworks;
+            }
+        }
+
+        let currentXTargetForWord = (canvas.width - currentLineTotalWidth) / 2;
 
         for (let j = 0; j < wordsInLine.length; j++) {
             if (fireworks[wordIndexInFireworks]) {
-                const wordStartTargetX = currentXTargetForLineStart + wordMetrics.slice(0, j).reduce((sum, m) => sum + m.width + spaceWidth, 0);
-                fireworks[wordIndexInFireworks].targetX = wordStartTargetX;
+                fireworks[wordIndexInFireworks].targetX = currentXTargetForWord; // Set start X of the word
+                // Advance X for the next word
+                currentXTargetForWord += wordMetrics[j].width;
+                if (j < wordsInLine.length - 1) {
+                    currentXTargetForWord += adjustedSpaceWidthFireworks;
+                }
             }
             wordIndexInFireworks++;
         }
@@ -1499,6 +1577,7 @@ function updateFireworks() {
 
     fireworks.forEach((fw) => {
       const wordWidth = tempCtx.measureText(fw.text).width;
+      // fw.targetX is already the start of the word, so for centering text, add half its width
       const centeredTargetX = fw.targetX + wordWidth / 2;
       fw.x += (centeredTargetX - fw.x) * ease * 0.2;
       fw.y += (fw.targetY - fw.y) * ease * 0.2;
@@ -1577,7 +1656,7 @@ function spawnEnemy() {
     rotation: 0
   };
 
-  if (idx === 3) {
+  if (idx === 3) { // Maple Leaf
     enemy.swayAngle = Math.random() * Math.PI * 2;
     enemy.swaySpeed = (Math.random() * 2 + 1.5) * (Math.random() > 0.5 ? 1 : -1);
     enemy.swayAmplitude = Math.random() * 20 + 20;
@@ -1585,7 +1664,7 @@ function spawnEnemy() {
     enemy.flutterAngle = Math.random() * Math.PI * 2;
     enemy.flutterSpeed = Math.random() * 5 + 3;
     enemy.flutterAmplitude = Math.random() * 3 + 3;
-  } else if (idx === 2) {
+  } else if (idx === 2) { // Cosmos
     enemy.rotationSpeed = (Math.random() * 0.8 + 0.4) * (Math.random() > 0.5 ? 1 : -1);
     enemy.driftXPerSecond = (Math.random() - 0.5) * 20;
     enemy.swayAngle = Math.random() * Math.PI * 2;
@@ -1618,7 +1697,9 @@ function spawnEnemy() {
 
 function update(delta) {
   enemies = enemies.filter(e => e.y <= canvas.height + e.h);
-  while (enemies.length < 2) spawnEnemy();
+  while (enemies.length < 2) {
+    spawnEnemy();
+  }
 
   enemies.forEach(e => {
     const deltaTimeSeconds = delta / 1000.0;
@@ -1669,6 +1750,7 @@ function update(delta) {
   });
   detachedPetals = detachedPetals.filter(p => p.y <= canvas.height + p.h);
 
+
   enemyBullets = enemyBullets.filter(b => b.y < canvas.height).map(b => { b.y += b.speed; return b; });
 
   bullets.forEach((b, bi) => {
@@ -1693,11 +1775,14 @@ function update(delta) {
             localStorage.setItem('sentenceIndex', sentenceIndex.toString());
             sounds.explosion.play();
         }
-        enemies.splice(ei, 1); bullets.splice(bi, 1);
+        enemies.splice(ei, 1);
+        bullets.splice(bi, 1);
       }
     });
   });
-  if (sentenceActive) updateFireworks();
+  if (sentenceActive) {
+    updateFireworks();
+  }
 
   if (!currentQuestionSentence && !currentAnswerSentence && !sentenceActive) {
     showPlayButton = false; showPlayButtonQuestion = false;
@@ -1711,10 +1796,8 @@ function update(delta) {
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
   ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
 
   enemies.forEach(e => {
@@ -1766,9 +1849,7 @@ function draw() {
       const tempAnswerSentence = currentAnswerSentence;
       const tempAnswerIndex = currentAnswerSentenceIndex;
       currentAnswerSentence = null; currentAnswerSentenceIndex = null;
-
       drawCenterSentence();
-
       currentAnswerSentence = tempAnswerSentence;
       currentAnswerSentenceIndex = tempAnswerIndex;
     }
@@ -1783,7 +1864,7 @@ function draw() {
 
   if (!sentenceActive) centerAlpha = 1.0;
   else if (fireworksState && fireworksState.phase === "gather") {
-      // Alpha handled by gather
+      // Alpha is managed by gather phase
   } else centerAlpha = previousGlobalCenterAlpha;
 }
 
@@ -1816,13 +1897,18 @@ function resetGameStateForStartStop() {
     if (activeWordTranslation) activeWordTranslation.show = false;
     activeWordTranslation = null;
     if (wordTranslationTimeoutId) { clearTimeout(wordTranslationTimeoutId); wordTranslationTimeoutId = null; }
-    centerSentenceWordRects = []; isActionLocked = false;
+    centerSentenceWordRects = [];
+    isActionLocked = false;
 }
 
 function startGame() {
   calculateTopOffset();
   if (!allAssetsReady) {
-    alert("이미지 및 비디오 로딩 중입니다. 잠시 후 다시 시도하세요.");
+    console.warn("Assets not ready. Please wait and try starting again.");
+    ctx.fillStyle = "white";
+    ctx.font = "16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("이미지 및 비디오 로딩 중... 잠시 후 다시 시도하세요.", canvas.width / 2, canvas.height / 2);
     return;
   }
   isGameRunning = true;
@@ -1857,15 +1943,11 @@ function startGame() {
   localStorage.setItem('sentenceIndex', sentenceIndex.toString());
 
   spawnEnemy(); spawnEnemy();
-
   player.x = canvas.width / 2 - PLAYER_SIZE / 2;
   player.y = topOffset + (canvas.height - topOffset) - PLAYER_SIZE - 10;
   player.y = Math.max(topOffset, player.y);
-
   lastTime = performance.now();
-
   getVoicesReliably().catch(err => console.error("startGame: Error during voice pre-warming:", err));
-
   requestAnimationFrame(gameLoop);
 }
 
@@ -1952,8 +2034,8 @@ function handleCanvasInteraction(clientX, clientY, event) {
 
     if ((currentQuestionSentence || currentAnswerSentence) && centerSentenceWordRects.length > 0) {
         for (const wordRect of centerSentenceWordRects) {
-          if (clientX >= wordRect.x && clientX <= wordRect.x + wordRect.w &&
-              clientY >= wordRect.y - wordRect.h / 2 && clientY <= wordRect.y + wordRect.h / 2 ) {
+          if (clientX >= (wordRect.x - expandedMargin/2) && clientX <= (wordRect.x + wordRect.w + expandedMargin/2) &&
+              clientY >= (wordRect.y - wordRect.h / 2 - expandedMargin/2) && clientY <= (wordRect.y + wordRect.h / 2 + expandedMargin/2) ) {
             window.speechSynthesis.cancel();
             speakWord(wordRect.word).catch(err => console.error(`Error speaking word "${wordRect.word}":`, err));
 
@@ -2031,7 +2113,7 @@ canvas.addEventListener('touchmove', e => {
     touch.clientY >= (playButtonRectQuestion.y - expandedMargin) && touch.clientY <= (playButtonRectQuestion.y + playButtonRectQuestion.h + expandedMargin);
   const isOverPlayBtnA = showPlayButton && playButtonRect &&
     touch.clientX >= (playButtonRect.x - expandedMargin) && touch.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
-    touch.clientY >= (playButtonRect.y - expandedMargin) && clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin);
+    touch.clientY >= (playButtonRect.y - expandedMargin) && touch.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin); // Corrected clientY to touch.clientY
   let isOverWord = false;
   if ((currentQuestionSentence || currentAnswerSentence) && centerSentenceWordRects.length > 0) {
     for (const wordRect of centerSentenceWordRects) {

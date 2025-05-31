@@ -942,6 +942,45 @@ async function speakWord(word) {
 const englishFont = "21.168px Arial";
 const translationFont = "17.0px Arial";
 
+
+// --- START: New isPastParticiple function ---
+function isPastParticiple(word) {
+    const lowerWord = word.toLowerCase().replace(/[^a-z]/g, ''); // Keep only letters
+    if (!lowerWord) return false;
+
+    const irregularPPs = [
+        "been", "begun", "broken", "brought", "built", "bought", "caught", "chosen", "come", "cost",
+        "cut", "done", "drawn", "dreamt", "dreamed", "drunk", "driven", "eaten", "fallen", "felt",
+        "fought", "found", "flown", "forgotten", "forgiven", "frozen", "got", "gotten", "given",
+        "gone", "grown", "hung", "had", "heard", "hidden", "hit", "held", "hurt", "kept",
+        "known", "laid", "led", "left", "lent", "let", "lain", "lit", "lost", "made",
+        "meant", "met", "paid", "put", "quit", "read", "ridden", "rung", "risen", "run",
+        "said", "seen", "sold", "sent", "set", "shaken", "shone", "shot", "shown", "shut",
+        "sung", "sunk", "sat", "slept", "spoken", "spent", "spread", "stood", "stolen",
+        "stuck", "sworn", "swept", "swum", "taken", "taught", "torn", "told", "thought",
+        "thrown", "understood", "woken", "worn", "won", "written"
+        // Add specific past participles from the game's sentences if needed and irregular
+        // e.g., "cried" (regular but common), "rolled" (regular), "melted" (regular)
+        // "allowed", "cleaned", "crashed", "fixed", "joined", "jumped", "laughed",
+        // "opened", "practiced", "shared", "stuck", "visited", "talked", "helped"
+    ];
+
+    if (irregularPPs.includes(lowerWord)) {
+        return true;
+    }
+
+    // Check for regular past participles (ending in "ed")
+    if (lowerWord.length > 2 && lowerWord.endsWith("ed")) {
+        // Avoid common adjectives ending in 'ed' that are not typically verbs in this structure
+        const nonVerbEdEndings = ["bed", "red", "shed", "wed"]; // "led" is in irregulars
+        if (nonVerbEdEndings.includes(lowerWord)) return false;
+        // For "aux + have + X", X ending in "ed" is highly likely a PP.
+        return true;
+    }
+    return false;
+}
+// --- END: New isPastParticiple function ---
+
 // =======================================================================
 // START OF MODIFIED splitSentence FUNCTION
 // =======================================================================
@@ -953,128 +992,148 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
     let line1Words = [];
     let line2Words = [];
 
-    const isEffectiveQuestionType = (isCurrentlyQuestion !== null) ? isCurrentlyQuestion : originalSentenceForShortCheck.endsWith('?');
+    let modalHavePpFoundAndSplit = false;
 
-    if (isEffectiveQuestionType) {
-        let wordsConsumed = 0;
-        if (words.length > 0) {
-            if (isWh(words[0])) { // Starts with Wh-word
-                line1Words.push(words[0]); // Wh
-                wordsConsumed = 1;
-                if (wordsConsumed < words.length && isAux(words[wordsConsumed])) { // Wh + Aux
-                    line1Words.push(words[wordsConsumed++]); // Aux
-                    if (wordsConsumed < words.length) { // Wh + Aux + Subject (potential)
-                        line1Words.push(words[wordsConsumed++]); // Subject
-                        // Add Verb if it's the next word (4th) and a main verb
-                        if (wordsConsumed < words.length && isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed])) {
-                            line1Words.push(words[wordsConsumed++]); // Verb
-                        }
-                    }
-                } else if (wordsConsumed < words.length && (isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed]))) { // Wh (as Subj) + Verb
-                    line1Words.push(words[wordsConsumed++]); // Verb
-                } else if (wordsConsumed < words.length) { // Wh + Something else
-                    line1Words.push(words[wordsConsumed++]);
-                    if (wordsConsumed < words.length && (isAux(words[wordsConsumed]) || (isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed])) ) ) {
-                        if (line1Words.length < 4) {
-                           line1Words.push(words[wordsConsumed++]);
-                        }
-                    }
-                }
-            } else if (isAux(words[0])) { // Starts with Auxiliary
-                line1Words.push(words[0]); // Aux
-                wordsConsumed = 1;
-                if (wordsConsumed < words.length) { // Aux + Subject (potential)
-                    line1Words.push(words[wordsConsumed++]); // Subject
-                    if (wordsConsumed < words.length && isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed])) {
-                        line1Words.push(words[wordsConsumed++]); // Verb
-                    }
-                }
+    // Attempt to split based on "Modal Aux + (Subject) + have + PastParticiple"
+    // This structure should ideally be on the first line.
+    for (let i = 0; i < words.length; i++) { // Iterate through each word to find a potential modal
+        if (isAux(words[i])) {
+            let modalIdx = i;
+            let haveIdx = -1;
+            let ppIdx = -1;
+
+            // Scenario 1: Modal + have + PP (e.g., "could have gone")
+            if (modalIdx + 2 < words.length &&
+                words[modalIdx + 1].toLowerCase().replace(/'/g, "") === "have" &&
+                isPastParticiple(words[modalIdx + 2])) {
+                haveIdx = modalIdx + 1;
+                ppIdx = modalIdx + 2;
             }
-        }
-
-        if (line1Words.length === 0 && words.length > 0) {
-            let splitIdx = (words.length <= 3) ? words.length : Math.min(2, words.length);
-            if (words.length === 4 ) splitIdx = 2;
-            else if (words.length === 5) splitIdx = 3;
-
-            line1Words = words.slice(0, splitIdx);
-            wordsConsumed = line1Words.length;
-        }
-        line2Words = words.slice(wordsConsumed);
-
-    } else { // Answer sentence logic
-        let subjectEndIdx = -1;
-        for (let i = 0; i < words.length; i++) {
-            if (isAux(words[i]) || (isVerb(words[i]) && !isAux(words[i])) || isVing(words[i]) || isBeen(words[i])) {
-                subjectEndIdx = i;
-                break;
-            }
-        }
-
-        let wordsConsumedForLine1 = 0;
-
-        if (subjectEndIdx > 0) { // Subject exists and is not the first word
-            for (let i = 0; i < subjectEndIdx; i++) line1Words.push(words[i]);
-            wordsConsumedForLine1 = subjectEndIdx;
-
-            if (wordsConsumedForLine1 < words.length && isAux(words[wordsConsumedForLine1])) {
-                line1Words.push(words[wordsConsumedForLine1]);
-                wordsConsumedForLine1++;
+            // Scenario 2: Modal + Subject + have + PP (e.g., "could he have gone")
+            // Assuming a single-word subject for simplicity here.
+            else if (modalIdx + 3 < words.length &&
+                     /* words[modalIdx + 1] is Subject */
+                     words[modalIdx + 2].toLowerCase().replace(/'/g, "") === "have" &&
+                     isPastParticiple(words[modalIdx + 3])) {
+                haveIdx = modalIdx + 2;
+                ppIdx = modalIdx + 3;
             }
 
-            let verbAddedToLine1 = false;
-            if (wordsConsumedForLine1 < words.length && (isVerb(words[wordsConsumedForLine1]) || isVing(words[wordsConsumedForLine1]) || isBeen(words[wordsConsumedForLine1]))) {
-                let addVerb = true;
-                if (line1Words.length > subjectEndIdx && line1Words.length > 0) {
-                    const lastWordInL1 = line1Words[line1Words.length - 1].toLowerCase().replace(/[^a-z0-9']/g, '');
-                    const currentVerbCandidate = words[wordsConsumedForLine1].toLowerCase().replace(/[^a-z0-9']/g, '');
-                    if (lastWordInL1 === currentVerbCandidate && isAux(words[wordsConsumedForLine1])) {
-                        addVerb = false;
-                    }
-                }
-                if (addVerb) {
-                    line1Words.push(words[wordsConsumedForLine1]);
-                    verbAddedToLine1 = true;
-                }
-                wordsConsumedForLine1++;
+            if (ppIdx !== -1) {
+                // Found the "Modal ... have PP" structure.
+                // The first line should go up to this PP.
+                let endIndexForLine1 = ppIdx + 1; // Slice up to, but not including, the word *after* PP
+
+                line1Words = words.slice(0, endIndexForLine1);
+                line2Words = words.slice(endIndexForLine1);
+                modalHavePpFoundAndSplit = true;
+                break; // Prioritize the first complete "modal (+ subj) + have + pp"
             }
-
-            // Add Object (1 word) if a verb was added AND a next word exists
-            if (verbAddedToLine1 && wordsConsumedForLine1 < words.length) {
-                line1Words.push(words[wordsConsumedForLine1]);
-                wordsConsumedForLine1++;
-            }
-            line2Words = words.slice(wordsConsumedForLine1);
-
-        } else if (subjectEndIdx === 0 && words.length > 0) { // Sentence starts with Aux/Verb
-            line1Words.push(words[0]);
-            wordsConsumedForLine1 = 1;
-            let verbAddedToLine1 = (isVerb(words[0]) && !isAux(words[0])) || isVing(words[0]) || isBeen(words[0]);
-
-            if (wordsConsumedForLine1 < words.length && isAux(words[0]) && (isVerb(words[wordsConsumedForLine1]) || isVing(words[wordsConsumedForLine1]) || isBeen(words[wordsConsumedForLine1])) && !isAux(words[wordsConsumedForLine1])) {
-                line1Words.push(words[wordsConsumedForLine1]);
-                verbAddedToLine1 = true;
-                wordsConsumedForLine1++;
-            }
-
-            if (verbAddedToLine1 && wordsConsumedForLine1 < words.length && line1Words.length < 3 ) {
-                 line1Words.push(words[wordsConsumedForLine1]);
-                 wordsConsumedForLine1++;
-            }
-            line2Words = words.slice(wordsConsumedForLine1);
-
-        } else { // Fallback
-            const half = Math.max(1, Math.ceil(words.length / 2));
-            line1Words = words.slice(0, half);
-            wordsConsumedForLine1 = line1Words.length;
-            line2Words = words.slice(wordsConsumedForLine1);
         }
     }
 
+    if (!modalHavePpFoundAndSplit) {
+        // Fallback to original splitting logic if the specific "modal + have + pp" rule wasn't applied
+        const isEffectiveQuestionType = (isCurrentlyQuestion !== null) ? isCurrentlyQuestion : originalSentenceForShortCheck.endsWith('?');
+        let wordsConsumed = 0; // For questions
+        let wordsConsumedForLine1 = 0; // For answers
+
+        if (isEffectiveQuestionType) { // Question splitting logic
+            if (words.length > 0) {
+                if (isWh(words[0])) {
+                    line1Words.push(words[0]); wordsConsumed = 1;
+                    if (wordsConsumed < words.length && isAux(words[wordsConsumed])) {
+                        line1Words.push(words[wordsConsumed++]);
+                        if (wordsConsumed < words.length) { // Potential Subject
+                            line1Words.push(words[wordsConsumed++]);
+                            if (wordsConsumed < words.length && isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed])) {
+                                line1Words.push(words[wordsConsumed++]);
+                            }
+                        }
+                    } else if (wordsConsumed < words.length && (isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed]))) { // Wh (as Subj) + Verb
+                        line1Words.push(words[wordsConsumed++]);
+                    } else if (wordsConsumed < words.length) { // Wh + Something else
+                        line1Words.push(words[wordsConsumed++]);
+                        if (wordsConsumed < words.length && (isAux(words[wordsConsumed]) || (isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed])) ) ) {
+                            if (line1Words.length < 4) { line1Words.push(words[wordsConsumed++]); }
+                        }
+                    }
+                } else if (isAux(words[0])) { // Starts with Auxiliary
+                    line1Words.push(words[0]); wordsConsumed = 1;
+                    if (wordsConsumed < words.length) { // Potential Subject
+                        line1Words.push(words[wordsConsumed++]);
+                        if (wordsConsumed < words.length && isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed])) {
+                            line1Words.push(words[wordsConsumed++]);
+                        }
+                    }
+                }
+            }
+            // Fallback for questions if line1Words is still empty
+            if (line1Words.length === 0 && words.length > 0) {
+                let splitIdx = (words.length <= 3) ? words.length : Math.min(2, words.length);
+                if (words.length === 4) splitIdx = 2;
+                else if (words.length === 5) splitIdx = 3;
+                line1Words = words.slice(0, splitIdx);
+                wordsConsumed = line1Words.length;
+            }
+            line2Words = words.slice(wordsConsumed);
+        } else { // Answer splitting logic
+            let subjectEndIdx = -1;
+            for (let k = 0; k < words.length; k++) {
+                if (isAux(words[k]) || (isVerb(words[k]) && !isAux(words[k])) || isVing(words[k]) || isBeen(words[k])) {
+                    subjectEndIdx = k; break;
+                }
+            }
+            if (subjectEndIdx > 0) { // Subject + Verb/Aux
+                for (let k = 0; k < subjectEndIdx; k++) line1Words.push(words[k]);
+                wordsConsumedForLine1 = subjectEndIdx;
+                if (wordsConsumedForLine1 < words.length && isAux(words[wordsConsumedForLine1])) {
+                    line1Words.push(words[wordsConsumedForLine1++]);
+                }
+                let verbAddedToLine1 = false;
+                if (wordsConsumedForLine1 < words.length && (isVerb(words[wordsConsumedForLine1]) || isVing(words[wordsConsumedForLine1]) || isBeen(words[wordsConsumedForLine1]))) {
+                    let addVerb = true;
+                    if (line1Words.length > subjectEndIdx && line1Words.length > 0) {
+                        const lastWordInL1 = line1Words[line1Words.length - 1].toLowerCase().replace(/[^a-z0-9']/g, '');
+                        const currentVerbCandidate = words[wordsConsumedForLine1].toLowerCase().replace(/[^a-z0-9']/g, '');
+                        if (lastWordInL1 === currentVerbCandidate && isAux(words[wordsConsumedForLine1])) addVerb = false;
+                    }
+                    if (addVerb) { line1Words.push(words[wordsConsumedForLine1]); verbAddedToLine1 = true; }
+                    wordsConsumedForLine1++;
+                }
+                if (verbAddedToLine1 && wordsConsumedForLine1 < words.length) {
+                    line1Words.push(words[wordsConsumedForLine1++]);
+                }
+                line2Words = words.slice(wordsConsumedForLine1);
+            } else if (subjectEndIdx === 0 && words.length > 0) { // Starts with Aux/Verb
+                line1Words.push(words[0]); wordsConsumedForLine1 = 1;
+                let verbAddedToLine1 = (isVerb(words[0]) && !isAux(words[0])) || isVing(words[0]) || isBeen(words[0]);
+                if (wordsConsumedForLine1 < words.length && isAux(words[0]) && (isVerb(words[wordsConsumedForLine1]) || isVing(words[wordsConsumedForLine1]) || isBeen(words[wordsConsumedForLine1])) && !isAux(words[wordsConsumedForLine1])) {
+                    line1Words.push(words[wordsConsumedForLine1++]); verbAddedToLine1 = true;
+                }
+                if (verbAddedToLine1 && wordsConsumedForLine1 < words.length && line1Words.length < 3) {
+                    line1Words.push(words[wordsConsumedForLine1++]);
+                }
+                line2Words = words.slice(wordsConsumedForLine1);
+            } else { // Fallback for answers (e.g., all nouns, or no clear verb/aux start)
+                const half = Math.max(1, Math.ceil(words.length / 2));
+                line1Words = words.slice(0, half);
+                line2Words = words.slice(half);
+            }
+        }
+    }
+
+    // Override for very short sentences to be on one line,
+    // but only if modalHavePpFoundAndSplit didn't already result in line2Words being empty.
     if (words.length <= 4 && originalSentenceForShortCheck.length < 35) {
-        line1Words = words.slice();
-        line2Words = [];
-    } else if (line1Words.length === 0 && words.length > 0) {
+        if (!(modalHavePpFoundAndSplit && line2Words.length === 0)) {
+            line1Words = words.slice();
+            line2Words = [];
+        }
+    }
+    // Final check: if line1 is empty but there are words, put at least the first word on line1.
+    // This can happen if modalHavePp logic fails or original logic results in empty line1 for some reason.
+    if (line1Words.length === 0 && words.length > 0) {
         line1Words = [words[0]];
         line2Words = words.slice(1);
     }
@@ -1116,34 +1175,20 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
         const lineText = lines[i];
         let currentLineCenterY = yFirstLineTextCenter + i * LINE_HEIGHT;
 
-        // =======================================================================
-        // START OF USER REQUESTED LINE SPACING ADJUSTMENT
-        // =======================================================================
         if (isQuestionBlock) {
-            if (i === 0) { // 첫 번째 문장(질문 블록)의 첫 번째 줄
+            if (i === 0) {
                 currentLineCenterY -= 10;
             }
-            // 질문 블록의 두 번째 줄은 첫 번째 줄이 위로 이동하고
-            // 표준 LINE_HEIGHT에 의해 자연스럽게 간격이 넓어집니다.
-            // 늘어난 간격을 만들기 위해 두 번째 줄 자체에 대한 명시적인 +10px 조정은 필요하지 않습니다.
-        } else { // 두 번째 문장(답변 블록)
-            if (i === 1) { // 답변 블록의 두 번째 줄
+        } else {
+            if (i === 1) {
                 currentLineCenterY += 10;
             }
         }
-        // =======================================================================
-        // END OF USER REQUESTED LINE SPACING ADJUSTMENT
-        // =======================================================================
 
         const words = lineText.split(" ");
         let wordMetrics = words.map(w => ctx.measureText(w));
-
-        // --- START: 단어 간 간격 20% 증가 ---
         const originalSpaceWidth = ctx.measureText(" ").width;
         const adjustedSpaceWidth = originalSpaceWidth * 1.20;
-        // --- END: 단어 간 간격 20% 증가 ---
-
-        // Calculate total line width using the *adjusted* space width for centering
         let totalLineWidth = wordMetrics.reduce((sum, m) => sum + m.width, 0);
         if (words.length > 1) {
             totalLineWidth += adjustedSpaceWidth * (words.length - 1);
@@ -1156,7 +1201,6 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
             let rawWord = words[j];
             let cleanedWordForColor = rawWord.replace(/[^a-zA-Z0-9]/g, "");
             let lowerCleanedWordForColor = cleanedWordForColor.toLowerCase();
-
             let color = "#fff";
 
             if (isCurrentBlockContentQuestionType && i === 0 && j === 0 && (isAux(lowerCleanedWordForColor) || isWh(lowerCleanedWordForColor))) {
@@ -1170,10 +1214,8 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
                 color = "#40b8ff";
             }
 
-
             ctx.fillStyle = color;
             ctx.fillText(rawWord, currentX, currentLineCenterY);
-
             const measuredWidth = wordMetrics[j].width;
             localWordRects.push({
                 word: rawWord,
@@ -1183,8 +1225,7 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
                 isQuestionWord: isQuestionBlock
             });
 
-            // Use the *adjusted* space width for advancing X
-            if (j < words.length - 1) { // Only add space if it's not the last word
+            if (j < words.length - 1) {
                 currentX += measuredWidth + adjustedSpaceWidth;
             } else {
                 currentX += measuredWidth;
@@ -1196,7 +1237,6 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
         } else if (!isQuestionBlock && i === 1) {
             lastDrawnTextBottomY +=10;
         }
-
     }
     return { lastY: lastDrawnTextBottomY, wordRects: localWordRects };
 }
@@ -1204,13 +1244,11 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
 
 function drawPlayButton(buttonRect, baseScaleForOriginalSize) {
     if (!buttonRect) return;
-
     const visualShrinkFactor = 0.72;
     const visualWidth = buttonRect.w * visualShrinkFactor;
     const visualHeight = buttonRect.h * visualShrinkFactor;
     const visualX = buttonRect.x + (buttonRect.w - visualWidth) / 2;
     const visualY = buttonRect.y + (buttonRect.h - visualHeight) / 2;
-
     const internalElementScale = baseScaleForOriginalSize * visualShrinkFactor;
 
     ctx.save();
@@ -1233,13 +1271,11 @@ function drawPlayButton(buttonRect, baseScaleForOriginalSize) {
     const playSize = 36 * internalElementScale;
     const btnPad = 18 * internalElementScale;
     const triangleSymbolVerticalLineXOffset = 6 * internalElementScale;
-
     ctx.moveTo(visualX + btnPad + triangleSymbolVerticalLineXOffset, visualY + btnPad);
     ctx.lineTo(visualX + btnPad + triangleSymbolVerticalLineXOffset, visualY + visualHeight - btnPad);
     ctx.lineTo(visualX + btnPad + playSize, visualY + visualHeight / 2);
     ctx.closePath();
     ctx.fill();
-
     ctx.restore();
 }
 
@@ -1280,7 +1316,6 @@ function drawCenterSentence() {
             playButtonQuestionY = actualFirstLineCenterY - btnH_forHitbox / 2;
         }
 
-
         playButtonRectQuestion = { x: btnX, y: playButtonQuestionY, w: btnW_forHitbox, h: btnH_forHitbox };
         if (showPlayButtonQuestion) {
             drawPlayButton(playButtonRectQuestion, currentVisualScaleForHitbox);
@@ -1315,7 +1350,6 @@ function drawCenterSentence() {
         }
 
         const answerFirstLineCenterY = topYForAnswerBlock + LINE_HEIGHT / 2;
-
         playButtonRect = { x: btnX, y: answerFirstLineCenterY - btnH_forHitbox / 2, w: btnW_forHitbox, h: btnH_forHitbox };
         if (showPlayButton) {
             drawPlayButton(playButtonRect, currentVisualScaleForHitbox);
@@ -1349,14 +1383,11 @@ function drawCenterSentence() {
         ctx.textAlign = "center";
         ctx.fillStyle = "#98FB98";
         ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = 2; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
-
         const englishWordMiddleY = activeWordTranslation.y;
         const englishWordHalfHeight = activeWordTranslation.h / 2;
         const padding = 6;
-
         let tx = activeWordTranslation.x + activeWordTranslation.w / 2;
         let ty;
-
         if (activeWordTranslation.lineIndex === 0) {
             ctx.textBaseline = "bottom";
             ty = englishWordMiddleY - englishWordHalfHeight - padding;
@@ -1377,13 +1408,11 @@ function drawFireworks() {
   ctx.font = englishFont;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-
   fireworks.forEach(fw => {
     ctx.globalAlpha = 1;
     ctx.fillStyle = fw.color;
     ctx.fillText(fw.text, fw.x, fw.y);
   });
-
   ctx.restore();
 }
 
@@ -1396,10 +1425,8 @@ function getClockwiseAngle(index, total) {
 function startFireworks(sentenceTextForFireworks, globalSentenceIndex, explosionX, explosionY) {
     let roleOfNewSentence;
     let questionTextForLayout = "";
-
     const isNewSentenceQuestion = globalSentenceIndex % 2 === 0;
     roleOfNewSentence = isNewSentenceQuestion ? 'question' : 'answer';
-
 
     if (roleOfNewSentence === 'question') {
         currentQuestionSentence = null; currentAnswerSentence = null;
@@ -1422,7 +1449,6 @@ function startFireworks(sentenceTextForFireworks, globalSentenceIndex, explosion
     if (activeWordTranslation) activeWordTranslation.show = false;
     activeWordTranslation = null;
     if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
-
     centerSentenceWordRects = [];
 
     const [fireworkLine1, fireworkLine2] = splitSentence(sentenceTextForFireworks, isNewSentenceQuestion);
@@ -1467,10 +1493,8 @@ function startFireworks(sentenceTextForFireworks, globalSentenceIndex, explosion
         } else {
             const [qTextL1_layout, qTextL2_layout] = splitSentence(questionTextForLayout, true);
             const qTextLines_layout = [qTextL1_layout, qTextL2_layout].filter(l => l && l.trim());
-
             let questionBlockActualHeight_layout = qTextLines_layout.length * LINE_HEIGHT;
             if (qTextLines_layout.length === 2) questionBlockActualHeight_layout +=10;
-
 
             const questionBlockActualCenterY_layout = mainRenderAreaYCenter + SENTENCE_VERTICAL_ADJUSTMENT;
             let questionBlockActualBottomY_layout = questionBlockActualCenterY_layout + questionBlockActualHeight_layout / 2;
@@ -1479,7 +1503,6 @@ function startFireworks(sentenceTextForFireworks, globalSentenceIndex, explosion
             } else if (qTextLines_layout.length === 0) {
                  questionBlockActualBottomY_layout = questionBlockActualCenterY_layout;
             }
-
 
             let answerBlockFinalTopY_fw;
             if (qTextLines_layout.length > 0) {
@@ -1508,20 +1531,17 @@ function startFireworks(sentenceTextForFireworks, globalSentenceIndex, explosion
 
 function updateFireworks() {
   if (!fireworks || !fireworksState) return false;
-
   fireworksState.t++;
 
   if (fireworksState.phase === "explode") {
     const progress = Math.min(fireworksState.t / fireworksState.explodeDuration, 1);
     const ease = 1 - Math.pow(1 - progress, 2);
     const currentRadius = 51.2 * 0.88 + (120.96 * 0.88 - 51.2 * 0.88) * ease;
-
     fireworks.forEach((fw) => {
       fw.radius = currentRadius;
       fw.x = fireworksState.originX + Math.cos(fw.angle) * fw.radius;
       fw.y = fireworksState.originY + Math.sin(fw.angle) * fw.radius;
     });
-
     if (progress >= 1) { fireworksState.phase = "hold"; fireworksState.t = 0; }
   } else if (fireworksState.phase === "hold") {
     if (fireworksState.t >= fireworksState.holdDuration) {
@@ -1531,41 +1551,32 @@ function updateFireworks() {
   } else if (fireworksState.phase === "gather") {
     const progress = Math.min(fireworksState.t / fireworksState.gatherDuration, 1);
     const ease = Math.pow(progress, 2);
-
     const tempCtx = canvas.getContext('2d');
     tempCtx.font = englishFont;
     const isGatherSentenceQuestion = fireworksState.roleOfNewSentence === 'question';
     const [sentenceLine1Gather, sentenceLine2Gather] = splitSentence(fireworksState.sentenceTextToDisplayAfter, isGatherSentenceQuestion);
-
     let sentenceLineWordArrays = [];
     if(sentenceLine1Gather.trim()) sentenceLineWordArrays.push(sentenceLine1Gather.split(" "));
     if(sentenceLine2Gather.trim()) sentenceLineWordArrays.push(sentenceLine2Gather.split(" "));
 
-    // --- START: 단어 간 간격 20% 증가 적용 (불꽃놀이 효과용) ---
     const originalSpaceWidthFireworks = tempCtx.measureText(" ").width;
     const adjustedSpaceWidthFireworks = originalSpaceWidthFireworks * 1.20;
-    // --- END: 단어 간 간격 20% 증가 적용 (불꽃놀이 효과용) ---
 
     let wordIndexInFireworks = 0;
     for (let i = 0; i < sentenceLineWordArrays.length; i++) {
         const wordsInLine = sentenceLineWordArrays[i];
         let wordMetrics = wordsInLine.map(w => tempCtx.measureText(w));
-
-        // Calculate total line width using the *adjusted* space width for centering
         let currentLineTotalWidth = 0;
         for(let k=0; k < wordMetrics.length; k++) {
             currentLineTotalWidth += wordMetrics[k].width;
-            if (k < wordMetrics.length - 1) { // Only add space if not the last word
+            if (k < wordMetrics.length - 1) {
                 currentLineTotalWidth += adjustedSpaceWidthFireworks;
             }
         }
-
         let currentXTargetForWord = (canvas.width - currentLineTotalWidth) / 2;
-
         for (let j = 0; j < wordsInLine.length; j++) {
             if (fireworks[wordIndexInFireworks]) {
-                fireworks[wordIndexInFireworks].targetX = currentXTargetForWord; // Set start X of the word
-                // Advance X for the next word
+                fireworks[wordIndexInFireworks].targetX = currentXTargetForWord;
                 currentXTargetForWord += wordMetrics[j].width;
                 if (j < wordsInLine.length - 1) {
                     currentXTargetForWord += adjustedSpaceWidthFireworks;
@@ -1577,7 +1588,6 @@ function updateFireworks() {
 
     fireworks.forEach((fw) => {
       const wordWidth = tempCtx.measureText(fw.text).width;
-      // fw.targetX is already the start of the word, so for centering text, add half its width
       const centeredTargetX = fw.targetX + wordWidth / 2;
       fw.x += (centeredTargetX - fw.x) * ease * 0.2;
       fw.y += (fw.targetY - fw.y) * ease * 0.2;
@@ -1590,7 +1600,6 @@ function updateFireworks() {
         const newSentenceIndex = fireworksState.finalSentenceIndex;
         const roleOfNewSentence = fireworksState.roleOfNewSentence;
         const isFinalSentenceQuestion = roleOfNewSentence === 'question';
-
         const [newLine1, newLine2] = splitSentence(newSentenceText, isFinalSentenceQuestion);
         const newSentenceObject = { line1: newLine1, line2: newLine2 };
         let playAudioForThisSentence = false;
@@ -1617,10 +1626,8 @@ function updateFireworks() {
             showPlayButton = true;
             playAudioForThisSentence = true;
         }
-
         centerAlpha = 1.0;
         fireworks = null; fireworksState = null; sentenceActive = false;
-
         if (activeWordTranslation) activeWordTranslation.show = false;
         activeWordTranslation = null; if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
 
@@ -1628,7 +1635,6 @@ function updateFireworks() {
             let audioIndexToPlay = null;
             if (roleOfNewSentence === 'question' && currentQuestionSentenceIndex !== null) audioIndexToPlay = currentQuestionSentenceIndex;
             else if (roleOfNewSentence === 'answer' && currentAnswerSentenceIndex !== null) audioIndexToPlay = currentAnswerSentenceIndex;
-
             if (audioIndexToPlay !== null) {
                 setTimeout(() => {
                     window.speechSynthesis.cancel();
@@ -1648,15 +1654,11 @@ function spawnEnemy() {
   const x = Math.random() * (canvas.width - ENEMY_SIZE);
   const spawnYMax = canvas.height * 0.2;
   const y = topOffset + Math.random() * spawnYMax + 20;
-
   let enemy = {
     x, y, w: ENEMY_SIZE, h: ENEMY_SIZE, img, shot: false, imgIndex: idx,
-    baseY: y,
-    initialX: x,
-    rotation: 0
+    baseY: y, initialX: x, rotation: 0
   };
-
-  if (idx === 3) { // Maple Leaf
+  if (idx === 3) {
     enemy.swayAngle = Math.random() * Math.PI * 2;
     enemy.swaySpeed = (Math.random() * 2 + 1.5) * (Math.random() > 0.5 ? 1 : -1);
     enemy.swayAmplitude = Math.random() * 20 + 20;
@@ -1664,22 +1666,16 @@ function spawnEnemy() {
     enemy.flutterAngle = Math.random() * Math.PI * 2;
     enemy.flutterSpeed = Math.random() * 5 + 3;
     enemy.flutterAmplitude = Math.random() * 3 + 3;
-  } else if (idx === 2) { // Cosmos
+  } else if (idx === 2) {
     enemy.rotationSpeed = (Math.random() * 0.8 + 0.4) * (Math.random() > 0.5 ? 1 : -1);
     enemy.driftXPerSecond = (Math.random() - 0.5) * 20;
     enemy.swayAngle = Math.random() * Math.PI * 2;
     enemy.swaySpeed = (Math.random() * 0.8 + 0.4);
     enemy.swayAmplitude = Math.random() * 10 + 5;
-
     const petal = {
-        x: enemy.x + enemy.w / 2 - PETAL_SIZE / 2,
-        y: enemy.y + enemy.h / 2,
-        w: PETAL_SIZE,
-        h: PETAL_SIZE,
-        img: enemyImgs[2],
-        baseY: enemy.y + enemy.h / 2,
-        initialX: enemy.x + enemy.w / 2 - PETAL_SIZE / 2,
-        rotation: Math.random() * Math.PI * 2,
+        x: enemy.x + enemy.w / 2 - PETAL_SIZE / 2, y: enemy.y + enemy.h / 2,
+        w: PETAL_SIZE, h: PETAL_SIZE, img: enemyImgs[2], baseY: enemy.y + enemy.h / 2,
+        initialX: enemy.x + enemy.w / 2 - PETAL_SIZE / 2, rotation: Math.random() * Math.PI * 2,
         rotationSpeed: (Math.random() - 0.5) * PETAL_ROTATION_SPEED_BASE * 2 + (Math.random() > 0.5 ? 0.3 : -0.3),
         swayAngle: Math.random() * Math.PI * 2,
         swaySpeed: (Math.random() * 0.5 + 0.75) * PETAL_SWAY_SPEED_BASE * (Math.random() > 0.5 ? 1 : -1),
@@ -1697,17 +1693,11 @@ function spawnEnemy() {
 
 function update(delta) {
   enemies = enemies.filter(e => e.y <= canvas.height + e.h);
-  while (enemies.length < 2) {
-    spawnEnemy();
-  }
-
+  while (enemies.length < 2) { spawnEnemy(); }
   enemies.forEach(e => {
     const deltaTimeSeconds = delta / 1000.0;
     e.baseY += ENEMY_MOVEMENT_SPEED_PPS * deltaTimeSeconds;
-
-    let newX = e.x;
-    let newY = e.baseY;
-
+    let newX = e.x; let newY = e.baseY;
     if (e.imgIndex === 3) {
       e.initialX += e.driftXPerSecond * deltaTimeSeconds;
       e.swayAngle += e.swaySpeed * deltaTimeSeconds;
@@ -1721,10 +1711,8 @@ function update(delta) {
       e.swayAngle += e.swaySpeed * deltaTimeSeconds;
       newX = e.initialX + Math.sin(e.swayAngle) * e.swayAmplitude;
     }
-    e.x = newX;
-    e.y = newY;
+    e.x = newX; e.y = newY;
   });
-
 
   bullets = bullets.filter(b => b.y + b.h > 0);
   bullets.forEach(b => {
@@ -1745,14 +1733,11 @@ function update(delta) {
       p.flutterAngle += p.flutterSpeed * deltaTimeSeconds;
       let currentY = p.baseY + Math.sin(p.flutterAngle) * p.flutterAmplitude;
       p.rotation += p.rotationSpeed * deltaTimeSeconds;
-      p.x = currentX;
-      p.y = currentY;
+      p.x = currentX; p.y = currentY;
   });
   detachedPetals = detachedPetals.filter(p => p.y <= canvas.height + p.h);
 
-
   enemyBullets = enemyBullets.filter(b => b.y < canvas.height).map(b => { b.y += b.speed; return b; });
-
   bullets.forEach((b, bi) => {
     enemies.forEach((e, ei) => {
       const collisionPaddingFactor = 0.25;
@@ -1762,11 +1747,8 @@ function update(delta) {
       const coreBulletY = b.y + coreBulletOffsetY;
       const coreBulletWidth = b.w * (1 - 2 * collisionPaddingFactor);
       const coreBulletHeight = b.h * (1 - 2 * collisionPaddingFactor);
-
-      if (coreBulletX < e.x + e.w &&
-          coreBulletX + coreBulletWidth > e.x &&
-          coreBulletY < e.y + e.h &&
-          coreBulletY + coreBulletHeight > e.y) {
+      if (coreBulletX < e.x + e.w && coreBulletX + coreBulletWidth > e.x &&
+          coreBulletY < e.y + e.h && coreBulletY + coreBulletHeight > e.y) {
         if (!sentenceActive) {
             const sentenceToFirework = sentences[sentenceIndex];
             const globalIndexOfSentence = sentenceIndex;
@@ -1775,15 +1757,11 @@ function update(delta) {
             localStorage.setItem('sentenceIndex', sentenceIndex.toString());
             sounds.explosion.play();
         }
-        enemies.splice(ei, 1);
-        bullets.splice(bi, 1);
+        enemies.splice(ei, 1); bullets.splice(bi, 1);
       }
     });
   });
-  if (sentenceActive) {
-    updateFireworks();
-  }
-
+  if (sentenceActive) { updateFireworks(); }
   if (!currentQuestionSentence && !currentAnswerSentence && !sentenceActive) {
     showPlayButton = false; showPlayButtonQuestion = false;
     showTranslationForQuestion = false; showTranslationForAnswer = false;
@@ -1799,7 +1777,6 @@ function draw() {
   ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
-
   enemies.forEach(e => {
     if (e.imgIndex === 2 || e.imgIndex === 3) {
       ctx.save();
@@ -1807,32 +1784,22 @@ function draw() {
       ctx.rotate(e.rotation);
       ctx.drawImage(e.img, -e.w / 2, -e.h / 2, e.w, e.h);
       ctx.restore();
-    } else {
-      ctx.drawImage(e.img, e.x, e.y, e.w, e.h);
-    }
-
+    } else { ctx.drawImage(e.img, e.x, e.y, e.w, e.h); }
     if (e.imgIndex === 1 && coffeeSteamVideo && coffeeSteamVideo.readyState >= HTMLVideoElement.HAVE_ENOUGH_DATA && !coffeeSteamVideo.paused) {
-      const steamScale = 0.5;
-      const steamWidth = e.w * steamScale * 1.5;
-      const steamHeight = e.h * steamScale * 1.6;
-      const steamOffsetX = (e.w - steamWidth) / 2;
+      const steamScale = 0.5; const steamWidth = e.w * steamScale * 1.5;
+      const steamHeight = e.h * steamScale * 1.6; const steamOffsetX = (e.w - steamWidth) / 2;
       const steamOffsetY = -steamHeight * 0.85;
-
       const prevCompositeOperation = ctx.globalCompositeOperation;
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = 0.65;
+      ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.65;
       ctx.drawImage(coffeeSteamVideo, e.x + steamOffsetX, e.y + steamOffsetY, steamWidth, steamHeight);
-      ctx.globalAlpha = 1.0;
-      ctx.globalCompositeOperation = prevCompositeOperation;
+      ctx.globalAlpha = 1.0; ctx.globalCompositeOperation = prevCompositeOperation;
     }
   });
-
   bullets.forEach(b => {
     if (b.img && b.img.complete && b.img.naturalWidth > 0) {
       ctx.drawImage(b.img, b.x, b.y, b.w, b.h);
     }
   });
-
   detachedPetals.forEach(p => {
       ctx.save();
       ctx.translate(p.x + p.w / 2, p.y + p.h / 2);
@@ -1840,18 +1807,14 @@ function draw() {
       ctx.drawImage(p.img, -p.w / 2, -p.h / 2, p.w, p.h);
       ctx.restore();
   });
-
   const previousGlobalCenterAlpha = centerAlpha;
-
   if (sentenceActive && fireworks && fireworksState) {
     if (fireworksState.roleOfNewSentence === 'answer' && currentQuestionSentence) {
       centerAlpha = 1.0;
-      const tempAnswerSentence = currentAnswerSentence;
-      const tempAnswerIndex = currentAnswerSentenceIndex;
+      const tempAnswerSentence = currentAnswerSentence; const tempAnswerIndex = currentAnswerSentenceIndex;
       currentAnswerSentence = null; currentAnswerSentenceIndex = null;
       drawCenterSentence();
-      currentAnswerSentence = tempAnswerSentence;
-      currentAnswerSentenceIndex = tempAnswerIndex;
+      currentAnswerSentence = tempAnswerSentence; currentAnswerSentenceIndex = tempAnswerIndex;
     }
     centerAlpha = previousGlobalCenterAlpha;
     drawFireworks();
@@ -1861,21 +1824,14 @@ function draw() {
       drawCenterSentence();
     }
   }
-
   if (!sentenceActive) centerAlpha = 1.0;
-  else if (fireworksState && fireworksState.phase === "gather") {
-      // Alpha is managed by gather phase
-  } else centerAlpha = previousGlobalCenterAlpha;
+  else if (fireworksState && fireworksState.phase === "gather") { /* Alpha managed by gather */ }
+  else centerAlpha = previousGlobalCenterAlpha;
 }
 
-
 function gameLoop(time) {
-  if (!isGameRunning || isGamePaused) {
-      if (isGamePaused) draw();
-      return;
-  }
-  const delta = time - lastTime;
-  lastTime = time;
+  if (!isGameRunning || isGamePaused) { if (isGamePaused) draw(); return; }
+  const delta = time - lastTime; lastTime = time;
   update(delta); draw();
   requestAnimationFrame(gameLoop);
 }
@@ -1885,8 +1841,7 @@ document.getElementById('pauseBtn').onclick = togglePause;
 document.getElementById('stopBtn').onclick = stopGame;
 
 function resetGameStateForStartStop() {
-    bullets = []; enemies = []; enemyBullets = [];
-    detachedPetals = [];
+    bullets = []; enemies = []; enemyBullets = []; detachedPetals = [];
     fireworks = null; fireworksState = null;
     currentQuestionSentence = null; currentAnswerSentence = null;
     currentQuestionSentenceIndex = null; currentAnswerSentenceIndex = null;
@@ -1897,38 +1852,26 @@ function resetGameStateForStartStop() {
     if (activeWordTranslation) activeWordTranslation.show = false;
     activeWordTranslation = null;
     if (wordTranslationTimeoutId) { clearTimeout(wordTranslationTimeoutId); wordTranslationTimeoutId = null; }
-    centerSentenceWordRects = [];
-    isActionLocked = false;
+    centerSentenceWordRects = []; isActionLocked = false;
 }
 
 function startGame() {
   calculateTopOffset();
   if (!allAssetsReady) {
     console.warn("Assets not ready. Please wait and try starting again.");
-    ctx.fillStyle = "white";
-    ctx.font = "16px Arial";
-    ctx.textAlign = "center";
+    ctx.fillStyle = "white"; ctx.font = "16px Arial"; ctx.textAlign = "center";
     ctx.fillText("이미지 및 비디오 로딩 중... 잠시 후 다시 시도하세요.", canvas.width / 2, canvas.height / 2);
     return;
   }
-  isGameRunning = true;
-  isGamePaused = false;
+  isGameRunning = true; isGamePaused = false;
   document.getElementById('pauseBtn').textContent = 'PAUSE';
-
-  if (bgmAudio) {
-    bgmAudio.pause();
-  }
+  if (bgmAudio) { bgmAudio.pause(); }
   bgmAudio = new Audio(bgmFiles[bgmIndex]);
-  bgmAudio.volume = isMuted ? 0 : 0.021;
-  bgmAudio.loop = true;
-
+  bgmAudio.volume = isMuted ? 0 : 0.021; bgmAudio.loop = true;
   const playPromise = bgmAudio.play();
   if (playPromise !== undefined) {
-    playPromise.catch(error => {
-      console.error('BGM play error on start:', error);
-    });
+    playPromise.catch(error => { console.error('BGM play error on start:', error); });
   }
-
   if (coffeeSteamVideo && coffeeVideoAssetReady) {
     coffeeSteamVideo.currentTime = 0;
     const coffeePlayPromise = coffeeSteamVideo.play();
@@ -1936,12 +1879,10 @@ function startGame() {
       coffeePlayPromise.catch(error => console.error("Error playing coffee steam video:", error));
     }
   }
-
   resetGameStateForStartStop();
   let storedIndex = Number(localStorage.getItem('sentenceIndex') || 0);
   sentenceIndex = storedIndex % sentences.length;
   localStorage.setItem('sentenceIndex', sentenceIndex.toString());
-
   spawnEnemy(); spawnEnemy();
   player.x = canvas.width / 2 - PLAYER_SIZE / 2;
   player.y = topOffset + (canvas.height - topOffset) - PLAYER_SIZE - 10;
@@ -1950,7 +1891,6 @@ function startGame() {
   getVoicesReliably().catch(err => console.error("startGame: Error during voice pre-warming:", err));
   requestAnimationFrame(gameLoop);
 }
-
 
 function togglePause() {
   if (!isGameRunning) return;
@@ -1996,12 +1936,10 @@ const expandedMargin = 10;
 
 function handleCanvasInteraction(clientX, clientY, event) {
   if (!isGameRunning || isGamePaused) return;
-
   if (!isActionLocked) {
     const isPlayBtnQuestionTouched = showPlayButtonQuestion && playButtonRectQuestion &&
       clientX >= (playButtonRectQuestion.x - expandedMargin) && clientX <= (playButtonRectQuestion.x + playButtonRectQuestion.w + expandedMargin) &&
       clientY >= (playButtonRectQuestion.y - expandedMargin) && clientY <= (playButtonRectQuestion.y + playButtonRectQuestion.h + expandedMargin);
-
     const isPlayBtnAnswerTouched = showPlayButton && playButtonRect &&
       clientX >= (playButtonRect.x - expandedMargin) && clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
       clientY >= (playButtonRect.y - expandedMargin) && clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin);
@@ -2018,7 +1956,6 @@ function handleCanvasInteraction(clientX, clientY, event) {
       }
       event.preventDefault(); setTimeout(() => { isActionLocked = false; }, 200); return;
     }
-
     if (isPlayBtnAnswerTouched) {
       showTranslationForAnswer = true; showTranslationForQuestion = false;
       if (activeWordTranslation) activeWordTranslation.show = false;
@@ -2031,18 +1968,15 @@ function handleCanvasInteraction(clientX, clientY, event) {
       }
       event.preventDefault(); setTimeout(() => { isActionLocked = false; }, 200); return;
     }
-
     if ((currentQuestionSentence || currentAnswerSentence) && centerSentenceWordRects.length > 0) {
         for (const wordRect of centerSentenceWordRects) {
           if (clientX >= (wordRect.x - expandedMargin/2) && clientX <= (wordRect.x + wordRect.w + expandedMargin/2) &&
               clientY >= (wordRect.y - wordRect.h / 2 - expandedMargin/2) && clientY <= (wordRect.y + wordRect.h / 2 + expandedMargin/2) ) {
             window.speechSynthesis.cancel();
             speakWord(wordRect.word).catch(err => console.error(`Error speaking word "${wordRect.word}":`, err));
-
             if (wordTranslationTimeoutId) clearTimeout(wordTranslationTimeoutId);
             if (activeWordTranslation) activeWordTranslation.show = false;
             activeWordTranslation = null; isActionLocked = true;
-
             getWordTranslation(wordRect.word).then(translation => {
                 activeWordTranslation = {
                     word: wordRect.word, translation: translation, x: wordRect.x, y: wordRect.y,
@@ -2053,7 +1987,6 @@ function handleCanvasInteraction(clientX, clientY, event) {
                     if (activeWordTranslation && activeWordTranslation.word === wordRect.word) activeWordTranslation.show = false;
                 }, WORD_TRANSLATION_DURATION);
             }).catch(err => console.error("Error getting word translation:", err));
-
             showTranslationForQuestion = false; showTranslationForAnswer = false;
             event.preventDefault(); setTimeout(() => { isActionLocked = false; }, 300); return;
           }
@@ -2064,10 +1997,8 @@ function handleCanvasInteraction(clientX, clientY, event) {
   player.x = clientX - player.w / 2;
   if (event.type === 'touchstart' || event.type === 'touchmove') player.y = clientY - player.h / 2 - PLAYER_TOUCH_Y_OFFSET;
   else player.y = clientY - player.h / 2;
-
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
   player.y = Math.max(topOffset, Math.min(canvas.height - player.h, player.y));
-
   if (activeWordTranslation && activeWordTranslation.show) {
     activeWordTranslation.show = false;
     if (wordTranslationTimeoutId) { clearTimeout(wordTranslationTimeoutId); wordTranslationTimeoutId = null; }
@@ -2076,14 +2007,8 @@ function handleCanvasInteraction(clientX, clientY, event) {
 
   const size = MIN_BUBBLE_SIZE + Math.random() * (MAX_BUBBLE_SIZE - MIN_BUBBLE_SIZE);
   const spawnX = player.x + player.w / 2 - size / 2;
-
   bullets.push({
-    x: spawnX,
-    y: player.y,
-    w: size,
-    h: size,
-    img: bulletImg,
-    timeAlive: 0,
+    x: spawnX, y: player.y, w: size, h: size, img: bulletImg, timeAlive: 0,
     velocityY: BUBBLE_BASE_SPEED_Y_PPS + (Math.random() - 0.5) * 2 * BUBBLE_SPEED_Y_VARIATION_PPS,
     baseX: spawnX,
     swayFrequency: BUBBLE_SWAY_FREQUENCY_MIN + Math.random() * (BUBBLE_SWAY_FREQUENCY_MAX - BUBBLE_SWAY_FREQUENCY_MIN),
@@ -2107,13 +2032,12 @@ canvas.addEventListener('mousedown', e => {
 canvas.addEventListener('touchmove', e => {
   if (!isGameRunning || isGamePaused) return;
   const touch = e.touches[0];
-
   const isOverPlayBtnQ = showPlayButtonQuestion && playButtonRectQuestion &&
     touch.clientX >= (playButtonRectQuestion.x - expandedMargin) && touch.clientX <= (playButtonRectQuestion.x + playButtonRectQuestion.w + expandedMargin) &&
     touch.clientY >= (playButtonRectQuestion.y - expandedMargin) && touch.clientY <= (playButtonRectQuestion.y + playButtonRectQuestion.h + expandedMargin);
   const isOverPlayBtnA = showPlayButton && playButtonRect &&
     touch.clientX >= (playButtonRect.x - expandedMargin) && touch.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
-    touch.clientY >= (playButtonRect.y - expandedMargin) && touch.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin); // Corrected clientY to touch.clientY
+    touch.clientY >= (playButtonRect.y - expandedMargin) && touch.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin);
   let isOverWord = false;
   if ((currentQuestionSentence || currentAnswerSentence) && centerSentenceWordRects.length > 0) {
     for (const wordRect of centerSentenceWordRects) {
@@ -2124,7 +2048,6 @@ canvas.addEventListener('touchmove', e => {
     }
   }
   if (isOverPlayBtnQ || isOverPlayBtnA || isOverWord) { e.preventDefault(); return; }
-
   player.x = touch.clientX - player.w / 2;
   player.y = touch.clientY - player.h / 2 - PLAYER_TOUCH_Y_OFFSET;
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
@@ -2134,7 +2057,6 @@ canvas.addEventListener('touchmove', e => {
 
 canvas.addEventListener('mousemove', e => {
   if (!isGameRunning || isGamePaused) return;
-
   const isOverPlayBtnQ = showPlayButtonQuestion && playButtonRectQuestion &&
       e.clientX >= (playButtonRectQuestion.x - expandedMargin) && e.clientX <= (playButtonRectQuestion.x + playButtonRectQuestion.w + expandedMargin) &&
       e.clientY >= (playButtonRectQuestion.y - expandedMargin) && e.clientY <= (playButtonRectQuestion.y + playButtonRectQuestion.h + expandedMargin);
@@ -2151,7 +2073,6 @@ canvas.addEventListener('mousemove', e => {
     }
   }
   if (isOverPlayBtnQ || isOverPlayBtnA || isOverWord) return;
-
   player.x = e.clientX - player.w / 2;
   player.y = e.clientY - player.h / 2;
   player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
@@ -2163,7 +2084,6 @@ window.addEventListener('load', () => {
     let storedIndex = Number(localStorage.getItem('sentenceIndex') || 0);
     sentenceIndex = storedIndex % sentences.length;
     localStorage.setItem('sentenceIndex', sentenceIndex.toString());
-
     if (bgmFiles.length > 0) {
         console.log("BGM object initialized on load. Path: " + bgmAudio.src);
     }

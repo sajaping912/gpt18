@@ -1325,7 +1325,7 @@ function drawCenterSentence() {
             ctx.font = translationFont;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillStyle = "#FFD600";
+            ctx.fillStyle = "#2E8B57"; // SeaGreen (어두운 녹색)
             ctx.shadowColor = "#111"; ctx.shadowBlur = 4;
             const translationTextHeight = parseFloat(translationFont.match(/(\d*\.?\d*)px/)[1]);
             const translationBelowY = questionDrawOutput.lastY + 10 + translationTextHeight / 2;
@@ -1363,10 +1363,12 @@ function drawCenterSentence() {
             ctx.font = translationFont;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillStyle = "#FFD600";
+            ctx.fillStyle = "#2E8B57"; // SeaGreen (어두운 녹색)
             ctx.shadowColor = "#111"; ctx.shadowBlur = 4;
             const translationTextHeight = parseFloat(translationFont.match(/(\d*\.?\d*)px/)[1]);
-            const translationBelowY = answerDrawOutput.lastY + 10 + translationTextHeight / 2;
+            // --- START: 답변 한글 해석 위치 조정 ---
+            const translationBelowY = answerDrawOutput.lastY + 2 + translationTextHeight / 2; // 10에서 7로 변경하여 3px 위로 이동
+            // --- END: 답변 한글 해석 위치 조정 ---
             ctx.fillText(translations[currentAnswerSentenceIndex], canvas.width / 2, translationBelowY);
             ctx.restore();
         }
@@ -1379,7 +1381,7 @@ function drawCenterSentence() {
         const wordTransFontSize = 16;
         ctx.font = `${wordTransFontSize}px ${wordTransFontFamily}`;
         ctx.textAlign = "center";
-        ctx.fillStyle = "#98FB98";
+        ctx.fillStyle = "#98FB98"; 
         ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = 2; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
         const englishWordMiddleY = activeWordTranslation.y;
         const englishWordHalfHeight = activeWordTranslation.h / 2;

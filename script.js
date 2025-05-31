@@ -1366,9 +1366,7 @@ function drawCenterSentence() {
             ctx.fillStyle = "#2E8B57"; // SeaGreen (어두운 녹색)
             ctx.shadowColor = "#111"; ctx.shadowBlur = 4;
             const translationTextHeight = parseFloat(translationFont.match(/(\d*\.?\d*)px/)[1]);
-            // --- START: 답변 한글 해석 위치 조정 ---
-            const translationBelowY = answerDrawOutput.lastY + 2 + translationTextHeight / 2; // 10에서 7로 변경하여 3px 위로 이동
-            // --- END: 답변 한글 해석 위치 조정 ---
+            const translationBelowY = answerDrawOutput.lastY + 7 + translationTextHeight / 2; 
             ctx.fillText(translations[currentAnswerSentenceIndex], canvas.width / 2, translationBelowY);
             ctx.restore();
         }
@@ -1381,7 +1379,9 @@ function drawCenterSentence() {
         const wordTransFontSize = 16;
         ctx.font = `${wordTransFontSize}px ${wordTransFontFamily}`;
         ctx.textAlign = "center";
-        ctx.fillStyle = "#98FB98"; 
+        // --- START: 개별 단어 뜻 색상 변경 ---
+        ctx.fillStyle = "#2E8B57"; // SeaGreen (어두운 녹색)
+        // --- END: 개별 단어 뜻 색상 변경 ---
         ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = 2; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
         const englishWordMiddleY = activeWordTranslation.y;
         const englishWordHalfHeight = activeWordTranslation.h / 2;

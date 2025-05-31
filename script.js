@@ -432,8 +432,8 @@ const PETAL_DRIFT_X_PPS_BASE = 30;
 const PETAL_FLUTTER_AMPLITUDE_BASE = 3.5;
 const PETAL_FLUTTER_SPEED_BASE = 3.0;
 
-const SENTENCE_VERTICAL_ADJUSTMENT = -80;
-const ANSWER_OFFSET_Y = 70;
+const SENTENCE_VERTICAL_ADJUSTMENT = -86; // Changed from -80 to -86 (moved up by 6px)
+const ANSWER_OFFSET_Y = 82; // Changed from 70 to 82 (increased gap by 12px)
 const LINE_HEIGHT = 30;
 const PLAYER_TOUCH_Y_OFFSET = 15;
 
@@ -1101,7 +1101,7 @@ function drawCenterSentence() {
     ctx.globalAlpha = centerAlpha;
 
     const mainRenderAreaYCenter = topOffset + (canvas.height - topOffset) / 2;
-    const questionBlockCenterY = mainRenderAreaYCenter + SENTENCE_VERTICAL_ADJUSTMENT;
+    const questionBlockCenterY = mainRenderAreaYCenter + SENTENCE_VERTICAL_ADJUSTMENT; // This uses the updated constant
 
     let questionBlockContext = { verbColored: false };
     let questionDrawOutput = { lastY: questionBlockCenterY - LINE_HEIGHT, wordRects: [] };
@@ -1148,9 +1148,12 @@ function drawCenterSentence() {
         let topYForAnswerBlock;
 
         if (currentQuestionSentence) {
-            topYForAnswerBlock = questionDrawOutput.lastY + ANSWER_OFFSET_Y;
+            topYForAnswerBlock = questionDrawOutput.lastY + ANSWER_OFFSET_Y; // This uses the updated constant
         } else {
-            topYForAnswerBlock = questionBlockCenterY - (answerBlockHeight / 2);
+            // If there's no question, center the answer block similarly to how question block would be centered
+            // but take into account it's an answer (so no SENTENCE_VERTICAL_ADJUSTMENT, or a modified one)
+            // For now, let's keep it simple and assume question always exists or this part of logic might need review for standalone answers
+            topYForAnswerBlock = mainRenderAreaYCenter - (answerBlockHeight / 2); // Simplified centering for standalone answer
         }
 
         const answerFirstLineCenterY = topYForAnswerBlock + LINE_HEIGHT / 2;

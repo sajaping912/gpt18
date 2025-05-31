@@ -939,8 +939,8 @@ async function speakWord(word) {
   });
 }
 
-const englishFont = "21.168px Arial"; 
-const translationFont = "17.0px Arial"; 
+const englishFont = "21.168px Arial";
+const translationFont = "17.0px Arial";
 
 // =======================================================================
 // START OF MODIFIED splitSentence FUNCTION
@@ -972,16 +972,10 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
                     }
                 } else if (wordsConsumed < words.length && (isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed]))) { // Wh (as Subj) + Verb
                     line1Words.push(words[wordsConsumed++]); // Verb
-                    // This pattern is "Wh (Subj) Verb". The request focuses on "Wh Aux Sub Verb".
-                    // If we wanted to extend this to "Wh (Subj) Verb Obj" for line 1 (max 3 words for this specific pattern):
-                    // if (wordsConsumed < words.length && line1Words.length < 3) {
-                    //    line1Words.push(words[wordsConsumed++]);
-                    // }
-                } else if (wordsConsumed < words.length) { // Wh + Something else (e.g. "Which one...")
-                    line1Words.push(words[wordsConsumed++]); // Add that "something else"
-                     // Then check if an Aux or Main Verb follows
+                } else if (wordsConsumed < words.length) { // Wh + Something else
+                    line1Words.push(words[wordsConsumed++]); 
                     if (wordsConsumed < words.length && (isAux(words[wordsConsumed]) || (isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed])) ) ) {
-                        if (line1Words.length < 4) { // Limit to 4 words total for line 1
+                        if (line1Words.length < 4) { 
                            line1Words.push(words[wordsConsumed++]);
                         }
                     }
@@ -991,7 +985,6 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
                 wordsConsumed = 1;
                 if (wordsConsumed < words.length) { // Aux + Subject (potential)
                     line1Words.push(words[wordsConsumed++]); // Subject
-                    // Add Verb if it's the next word (3rd) and a main verb
                     if (wordsConsumed < words.length && isVerb(words[wordsConsumed]) && !isAux(words[wordsConsumed])) {
                         line1Words.push(words[wordsConsumed++]); // Verb
                     }
@@ -999,66 +992,89 @@ function splitSentence(sentenceText, isCurrentlyQuestion = null) {
             }
         }
 
-        if (line1Words.length === 0 && words.length > 0) { // Fallback if no Wh/Aux pattern matched
-            let splitIdx = (words.length <= 3) ? words.length : Math.min(2, words.length); // Default to 2 words for non-patterned questions, or all if very short.
-            if (words.length === 4 ) splitIdx = 2; // if 4 words, split 2/2
-            else if (words.length === 5) splitIdx = 3; // if 5 words, split 3/2
+        if (line1Words.length === 0 && words.length > 0) { 
+            let splitIdx = (words.length <= 3) ? words.length : Math.min(2, words.length); 
+            if (words.length === 4 ) splitIdx = 2; 
+            else if (words.length === 5) splitIdx = 3; 
             
             line1Words = words.slice(0, splitIdx);
             wordsConsumed = line1Words.length;
         }
         line2Words = words.slice(wordsConsumed);
 
-    } else { // Answer sentence logic (taken from the existing complete script the user has)
-        let subjectEndIndex = -1;
+    } else { // Answer sentence logic
+        let subjectEndIdx = -1;
         for (let i = 0; i < words.length; i++) {
-            const currentWordClean = words[i].toLowerCase().replace(/[^a-z0-9']/g, '');
-            if (isAux(currentWordClean) || (isVerb(currentWordClean) && !isAux(currentWordClean)) || isVing(currentWordClean) || isBeen(currentWordClean)) {
-                subjectEndIndex = i;
+            if (isAux(words[i]) || (isVerb(words[i]) && !isAux(words[i])) || isVing(words[i]) || isBeen(words[i])) {
+                subjectEndIdx = i;
                 break;
             }
         }
 
-        if (subjectEndIndex > 0) {
-            line1Words = words.slice(0, subjectEndIndex);
-            let verbPartStartIndex = subjectEndIndex;
+        let wordsConsumedForLine1 = 0;
 
-            if (verbPartStartIndex < words.length && isAux(words[verbPartStartIndex])) {
-                line1Words.push(words[verbPartStartIndex]);
-                verbPartStartIndex++;
+        if (subjectEndIdx > 0) { // Subject exists and is not the first word
+            for (let i = 0; i < subjectEndIdx; i++) line1Words.push(words[i]);
+            wordsConsumedForLine1 = subjectEndIdx;
+
+            if (wordsConsumedForLine1 < words.length && isAux(words[wordsConsumedForLine1])) {
+                line1Words.push(words[wordsConsumedForLine1]);
+                wordsConsumedForLine1++;
             }
-            if (verbPartStartIndex < words.length && (isVerb(words[verbPartStartIndex]) || isVing(words[verbPartStartIndex]) || isBeen(words[verbPartStartIndex]))) {
-                let alreadyAddedAux = false;
-                if (line1Words.length > subjectEndIndex) {
+
+            let verbAddedToLine1 = false;
+            if (wordsConsumedForLine1 < words.length && (isVerb(words[wordsConsumedForLine1]) || isVing(words[wordsConsumedForLine1]) || isBeen(words[wordsConsumedForLine1]))) {
+                let addVerb = true;
+                if (line1Words.length > subjectEndIdx && line1Words.length > 0) { 
                     const lastWordInL1 = line1Words[line1Words.length - 1].toLowerCase().replace(/[^a-z0-9']/g, '');
-                    const currentWordVerb = words[verbPartStartIndex].toLowerCase().replace(/[^a-z0-9']/g, '');
-                    if (lastWordInL1 === currentWordVerb && isAux(words[verbPartStartIndex])) {
-                        alreadyAddedAux = true;
+                    const currentVerbCandidate = words[wordsConsumedForLine1].toLowerCase().replace(/[^a-z0-9']/g, '');
+                    if (lastWordInL1 === currentVerbCandidate && isAux(words[wordsConsumedForLine1])) {
+                        addVerb = false;
                     }
                 }
-                if (!alreadyAddedAux) {
-                     line1Words.push(words[verbPartStartIndex]);
+                if (addVerb) {
+                    line1Words.push(words[wordsConsumedForLine1]);
+                    verbAddedToLine1 = true; 
                 }
+                wordsConsumedForLine1++; 
             }
-            line2Words = words.slice(line1Words.length);
-        } else if (subjectEndIndex === 0 && words.length > 0) { 
-            line1Words.push(words[0]); 
-            if (words.length > 1 && isAux(words[0]) && isVerb(words[1]) && !isAux(words[1])) {
-                line1Words.push(words[1]);
+
+            // Add Object (1 word) if a verb was added AND a next word exists
+            if (verbAddedToLine1 && wordsConsumedForLine1 < words.length) {
+                line1Words.push(words[wordsConsumedForLine1]);
+                wordsConsumedForLine1++;
             }
-            line2Words = words.slice(line1Words.length);
-        } else { 
+            line2Words = words.slice(wordsConsumedForLine1);
+
+        } else if (subjectEndIdx === 0 && words.length > 0) { // Sentence starts with Aux/Verb
+            line1Words.push(words[0]);
+            wordsConsumedForLine1 = 1;
+            let verbAddedToLine1 = (isVerb(words[0]) && !isAux(words[0])) || isVing(words[0]) || isBeen(words[0]);
+
+            if (wordsConsumedForLine1 < words.length && isAux(words[0]) && (isVerb(words[wordsConsumedForLine1]) || isVing(words[wordsConsumedForLine1]) || isBeen(words[wordsConsumedForLine1])) && !isAux(words[wordsConsumedForLine1])) {
+                line1Words.push(words[wordsConsumedForLine1]); 
+                verbAddedToLine1 = true;
+                wordsConsumedForLine1++;
+            }
+            
+            if (verbAddedToLine1 && wordsConsumedForLine1 < words.length && line1Words.length < 3 ) {
+                 line1Words.push(words[wordsConsumedForLine1]);
+                 wordsConsumedForLine1++;
+            }
+            line2Words = words.slice(wordsConsumedForLine1);
+
+        } else { // Fallback
             const half = Math.max(1, Math.ceil(words.length / 2));
             line1Words = words.slice(0, half);
-            line2Words = words.slice(half);
+            wordsConsumedForLine1 = line1Words.length;
+            line2Words = words.slice(wordsConsumedForLine1);
         }
     }
 
-    // General override for very short sentences to be on one line
     if (words.length <= 4 && originalSentenceForShortCheck.length < 35) {
         line1Words = words.slice();
         line2Words = [];
-    } else if (line1Words.length === 0 && words.length > 0) { // Ensure line1 is not empty
+    } else if (line1Words.length === 0 && words.length > 0) {
         line1Words = [words[0]];
         line2Words = words.slice(1);
     }
@@ -1074,7 +1090,7 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
     if (!sentenceObject) return { lastY: baseY, wordRects: [] };
 
     let localWordRects = [];
-    ctx.font = englishFont; 
+    ctx.font = englishFont;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
 
@@ -1283,7 +1299,7 @@ function drawCenterSentence() {
         ctx.save();
         ctx.globalAlpha = centerAlpha;
         const wordTransFontFamily = "'Malgun Gothic', 'Nanum Gothic', Arial, sans-serif";
-        const wordTransFontSize = 16; 
+        const wordTransFontSize = 16;
         ctx.font = `${wordTransFontSize}px ${wordTransFontFamily}`;
         ctx.textAlign = "center";
         ctx.fillStyle = "#98FB98";
@@ -1313,7 +1329,7 @@ function drawCenterSentence() {
 function drawFireworks() {
   if (!fireworks) return;
   ctx.save();
-  ctx.font = englishFont; 
+  ctx.font = englishFont;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
@@ -1456,7 +1472,7 @@ function updateFireworks() {
     const ease = Math.pow(progress, 2);
 
     const tempCtx = canvas.getContext('2d');
-    tempCtx.font = englishFont; 
+    tempCtx.font = englishFont;
     const isGatherSentenceQuestion = fireworksState.roleOfNewSentence === 'question';
     const [sentenceLine1Gather, sentenceLine2Gather] = splitSentence(fireworksState.sentenceTextToDisplayAfter, isGatherSentenceQuestion);
 

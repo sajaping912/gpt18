@@ -1183,7 +1183,9 @@ function drawSingleSentenceBlock(sentenceObject, baseY, isQuestionBlock, blockCo
 
             // 1. Wh-words at the start of a question line 1 are green.
             if (isCurrentBlockContentQuestionType && i === 0 && j === 0 && isWh(lowerCleanedWordForColor)) {
-                color = '#90EE90'; // Light Green for Wh-words
+                // --- START: 의문사 색상 변경 (중간톤 녹색) ---
+                color = '#5DBB63'; // Kelly Green (중간톤 녹색)
+                // --- END: 의문사 색상 변경 (중간톤 녹색) ---
             }
             // 2. Auxiliaries (including at start of Q line 1 if not Wh), 'been', 'ving' are blue.
             else if (isAux(lowerCleanedWordForColor) || isBeen(lowerCleanedWordForColor) || isVing(lowerCleanedWordForColor)) {
@@ -1366,7 +1368,7 @@ function drawCenterSentence() {
             ctx.fillStyle = "#2E8B57"; // SeaGreen (어두운 녹색)
             ctx.shadowColor = "#111"; ctx.shadowBlur = 4;
             const translationTextHeight = parseFloat(translationFont.match(/(\d*\.?\d*)px/)[1]);
-            const translationBelowY = answerDrawOutput.lastY + 7 + translationTextHeight / 2; 
+            const translationBelowY = answerDrawOutput.lastY + 3 + translationTextHeight / 2; 
             ctx.fillText(translations[currentAnswerSentenceIndex], canvas.width / 2, translationBelowY);
             ctx.restore();
         }
@@ -1379,9 +1381,7 @@ function drawCenterSentence() {
         const wordTransFontSize = 16;
         ctx.font = `${wordTransFontSize}px ${wordTransFontFamily}`;
         ctx.textAlign = "center";
-        // --- START: 개별 단어 뜻 색상 변경 ---
         ctx.fillStyle = "#2E8B57"; // SeaGreen (어두운 녹색)
-        // --- END: 개별 단어 뜻 색상 변경 ---
         ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = 2; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
         const englishWordMiddleY = activeWordTranslation.y;
         const englishWordHalfHeight = activeWordTranslation.h / 2;
@@ -2037,7 +2037,7 @@ canvas.addEventListener('touchmove', e => {
     touch.clientY >= (playButtonRectQuestion.y - expandedMargin) && touch.clientY <= (playButtonRectQuestion.y + playButtonRectQuestion.h + expandedMargin);
   const isOverPlayBtnA = showPlayButton && playButtonRect &&
     touch.clientX >= (playButtonRect.x - expandedMargin) && touch.clientX <= (playButtonRect.x + playButtonRect.w + expandedMargin) &&
-    touch.clientY >= (playButtonRect.y - expandedMargin) && clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin);
+    touch.clientY >= (playButtonRect.y - expandedMargin) && touch.clientY <= (playButtonRect.y + playButtonRect.h + expandedMargin);
   let isOverWord = false;
   if ((currentQuestionSentence || currentAnswerSentence) && centerSentenceWordRects.length > 0) {
     for (const wordRect of centerSentenceWordRects) {
